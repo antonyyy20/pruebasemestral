@@ -3,8 +3,9 @@ package com.example.jhdkasjhd.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
@@ -30,6 +31,7 @@ import com.example.jhdkasjhd.ui.auth.AuthViewModel
 import com.example.jhdkasjhd.ui.auth.LoginScreen
 import com.example.jhdkasjhd.ui.auth.RegisterScreen
 import com.example.jhdkasjhd.ui.checkin.QrScannerScreen
+import com.example.jhdkasjhd.ui.marketplace.CategoriesScreen
 import com.example.jhdkasjhd.ui.marketplace.EventDetailScreen
 import com.example.jhdkasjhd.ui.marketplace.MarketplaceScreen
 import com.example.jhdkasjhd.ui.organizer.CreateEventScreen
@@ -45,9 +47,12 @@ import com.example.jhdkasjhd.ui.theme.CoinbaseInk
 import com.example.jhdkasjhd.ui.theme.CoinbaseMuted
 import com.example.jhdkasjhd.ui.theme.CoinbasePrimary
 import com.example.jhdkasjhd.ui.theme.CoinbaseSurfaceStrong
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 private sealed class BottomTab(val route: String, val label: String) {
-    data object Marketplace : BottomTab(Routes.MARKETPLACE, "Eventos")
+    data object Home : BottomTab(Routes.MARKETPLACE, "Inicio")
+    data object Categories : BottomTab(Routes.CATEGORIES, "Categorías")
     data object Tickets : BottomTab(Routes.MY_TICKETS, "Boletos")
     data object MyEvents : BottomTab(Routes.MY_EVENTS, "Mis Eventos")
     data object Profile : BottomTab(Routes.PROFILE, "Perfil")
@@ -65,19 +70,20 @@ fun QuickvntNavHost(
 
     val showBottomBar = session != null && currentRoute in setOf(
         Routes.MARKETPLACE,
+        Routes.CATEGORIES,
         Routes.MY_TICKETS,
         Routes.MY_EVENTS,
         Routes.PROFILE
-    )
+    ) || (currentRoute?.startsWith("marketplace/category/") == true)
 
     Scaffold(
         containerColor = CoinbaseCanvas,
         bottomBar = {
             if (showBottomBar && session != null) {
                 val tabs = if (session!!.isOrganizer) {
-                    listOf(BottomTab.MyEvents, BottomTab.Marketplace, BottomTab.Profile)
+                    listOf(BottomTab.MyEvents, BottomTab.Home, BottomTab.Profile)
                 } else {
-                    listOf(BottomTab.Marketplace, BottomTab.Tickets, BottomTab.Profile)
+                    listOf(BottomTab.Home, BottomTab.Categories, BottomTab.Tickets, BottomTab.Profile)
                 }
 
                 NavigationBar(
@@ -86,7 +92,12 @@ fun QuickvntNavHost(
                 ) {
                     tabs.forEach { tab ->
                         NavigationBarItem(
-                            selected = currentRoute == tab.route,
+                            selected = when (tab) {
+                                BottomTab.Home -> currentRoute == Routes.MARKETPLACE ||
+                                    currentRoute?.startsWith("marketplace/category/") == true
+                                BottomTab.Categories -> currentRoute == Routes.CATEGORIES
+                                else -> currentRoute == tab.route
+                            },
                             onClick = {
                                 navController.navigate(tab.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
@@ -106,7 +117,8 @@ fun QuickvntNavHost(
                             icon = {
                                 Icon(
                                     imageVector = when (tab) {
-                                        BottomTab.Marketplace -> Icons.Default.Storefront
+                                        BottomTab.Home -> Icons.Default.Home
+                                        BottomTab.Categories -> Icons.Default.GridView
                                         BottomTab.Tickets -> Icons.Default.Event
                                         BottomTab.MyEvents -> Icons.Default.Event
                                         BottomTab.Profile -> Icons.Default.Person
@@ -169,6 +181,37 @@ fun QuickvntNavHost(
                 MarketplaceScreen(
                     onEventClick = { eventId ->
                         navController.navigate(Routes.eventDetail(eventId))
+                    },
+                    onSeeAllCategories = { navController.navigate(Routes.CATEGORIES) },
+                    onCategoryClick = { category ->
+                        navController.navigate(Routes.marketplaceCategory(category))
+                    }
+                )
+            }
+
+            composable(
+                route = Routes.MARKETPLACE_CATEGORY,
+                arguments = listOf(navArgument("categoryName") { type = NavType.StringType })
+            ) { backStack ->
+                val categoryName = backStack.arguments?.getString("categoryName")?.let {
+                    URLDecoder.decode(it, StandardCharsets.UTF_8.toString())
+                }
+                MarketplaceScreen(
+                    initialCategory = categoryName,
+                    onEventClick = { eventId ->
+                        navController.navigate(Routes.eventDetail(eventId))
+                    },
+                    onSeeAllCategories = { navController.navigate(Routes.CATEGORIES) },
+                    onCategoryClick = { category ->
+                        navController.navigate(Routes.marketplaceCategory(category))
+                    }
+                )
+            }
+
+            composable(Routes.CATEGORIES) {
+                CategoriesScreen(
+                    onCategoryClick = { category ->
+                        navController.navigate(Routes.marketplaceCategory(category))
                     }
                 )
             }

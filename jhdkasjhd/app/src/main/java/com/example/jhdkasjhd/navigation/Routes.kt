@@ -1,10 +1,15 @@
 package com.example.jhdkasjhd.navigation
 
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+
 object Routes {
     const val SPLASH = "splash"
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val MARKETPLACE = "marketplace"
+    const val MARKETPLACE_CATEGORY = "marketplace/category/{categoryName}"
+    const val CATEGORIES = "categories"
     const val EVENT_DETAIL = "event_detail/{eventId}"
     const val REGISTER_EVENT = "register_event/{eventId}"
     const val MY_TICKETS = "my_tickets"
@@ -22,4 +27,8 @@ object Routes {
     fun editEvent(eventId: String) = "edit_event/$eventId"
     fun analytics(eventId: String) = "analytics/$eventId"
     fun qrScanner(eventId: String) = "qr_scanner/$eventId"
+    fun marketplaceCategory(categoryName: String): String {
+        val encoded = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
+        return "marketplace/category/$encoded"
+    }
 }

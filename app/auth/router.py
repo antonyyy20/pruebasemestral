@@ -27,12 +27,33 @@ async def get_or_create_profile(
     name: str,
     role: str,
 ) -> Profile:
+    """Create a profile on first login without overwriting an existing role."""
     profile = await get_profile(db, user_id)
     if profile:
         return profile
 
     profile = Profile(id=user_id, name=name, role=role)
     db.add(profile)
+    await db.commit()
+    await db.refresh(profile)
+    return profile
+
+
+async def upsert_profile_for_register(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    name: str,
+    role: str,
+) -> Profile:
+    """Create or update profile on register so the chosen role is always persisted."""
+    profile = await get_profile(db, user_id)
+    if profile:
+        profile.name = name
+        profile.role = role
+    else:
+        profile = Profile(id=user_id, name=name, role=role)
+        db.add(profile)
+
     await db.commit()
     await db.refresh(profile)
     return profile
@@ -60,7 +81,8 @@ async def register(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Register in Supabase Auth and ensure a local profile exists."""
-    if user_data.role not in ["ATTENDEE", "ORGANIZER"]:
+    requested_role = user_data.role.strip().upper()
+    if requested_role not in ["ATTENDEE", "ORGANIZER"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El rol debe ser ATTENDEE u ORGANIZER",
@@ -81,11 +103,11 @@ async def register(
             )
 
         user_id = uuid.UUID(str(auth_response.user.id))
-        profile = await get_or_create_profile(
+        profile = await upsert_profile_for_register(
             db=db,
             user_id=user_id,
             name=user_data.name,
-            role=user_data.role,
+            role=requested_role,
         )
         return build_token_response(auth_response, profile)
 

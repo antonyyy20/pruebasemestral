@@ -284,7 +284,7 @@ fun RegisterScreen(
 
         CoinbasePrimaryButton(
             text = "Registrarse",
-            onClick = { viewModel.register(email.trim(), password, name.trim(), role) },
+            onClick = { viewModel.register(email.trim(), password, name.trim(), role.uppercase()) },
             loading = uiState.isLoading,
             enabled = name.isNotBlank() && email.isNotBlank() && password.length >= 6
         )
