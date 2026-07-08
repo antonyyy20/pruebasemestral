@@ -31,13 +31,13 @@ async def get_event_analytics(
     if not event:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Event not found"
+            detail="Evento no encontrado"
         )
 
     if event.organizer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the event organizer can view analytics"
+            detail="Solo el organizador del evento puede ver las analíticas"
         )
 
     # 2. Total capacity

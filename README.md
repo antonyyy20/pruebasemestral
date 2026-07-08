@@ -107,7 +107,12 @@ SUPABASE_URL="https://tu-proyecto.supabase.co"
 SUPABASE_KEY="tu-anon-public-key"
 SUPABASE_JWT_SECRET="tu-jwt-secret-de-supabase"
 
-DATABASE_URL="postgresql+asyncpg://postgres:contraseña@db.tu-proyecto.supabase.co:6543/postgres"
+DB_HOST="aws-0-us-east-1.pooler.supabase.com"
+DB_PORT=6543
+DB_USER="postgres.tu-project-ref"
+DB_PASSWORD="contraseña-de-database"
+DB_NAME="postgres"
+```
 
 QR_JWT_SECRET="clave-hexadecimal-aleatoria-para-firmar-codigos-qr"
 ```

@@ -24,7 +24,7 @@ async def register(
     if user_data.role not in ["ATTENDEE", "ORGANIZER"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role must be either ATTENDEE or ORGANIZER"
+            detail="El rol debe ser ATTENDEE u ORGANIZER"
         )
     
     try:
@@ -37,7 +37,7 @@ async def register(
         if not auth_response.user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Could not create user in authentication service."
+                detail="No se pudo crear el usuario en el servicio de autenticación."
             )
         
         user_id = auth_response.user.id
@@ -65,7 +65,7 @@ async def register(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Registration failed: {str(e)}"
+            detail=f"Error en el registro: {str(e)}"
         )
 
 @router.post("/login", response_model=TokenResponse)
@@ -86,7 +86,7 @@ async def login(
         if not auth_response.user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                detail="Credenciales inválidas"
             )
         
         user_id = auth_response.user.id
@@ -118,7 +118,7 @@ async def login(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Login failed: {str(e)}"
+            detail=f"Error en el inicio de sesión: {str(e)}"
         )
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -135,7 +135,7 @@ async def refresh_token(
         if not auth_response.user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired refresh token"
+                detail="Token de actualización inválido o expirado"
             )
             
         user_id = auth_response.user.id
@@ -148,7 +148,7 @@ async def refresh_token(
         if not profile:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="User profile not found"
+                detail="Perfil de usuario no encontrado"
             )
             
         return TokenResponse(
@@ -161,5 +161,5 @@ async def refresh_token(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Refresh failed: {str(e)}"
+            detail=f"Error al actualizar la sesión: {str(e)}"
         )

@@ -33,13 +33,13 @@ async def validate_checkin(
     if not ticket:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ticket not found"
+            detail="Boleto no encontrado"
         )
 
     if ticket.event_id != payload.event_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ticket does not belong to this event"
+            detail="El boleto no pertenece a este evento"
         )
 
     # 2. Check permission: must be Organizer of the event or assigned Staff
@@ -50,7 +50,7 @@ async def validate_checkin(
     if not event:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Event not found"
+            detail="Evento no encontrado"
         )
 
     is_organizer = event.organizer_id == current_user.id
@@ -66,7 +66,7 @@ async def validate_checkin(
     if not (is_organizer or is_staff):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only event organizers or assigned staff can validate check-ins"
+            detail="Solo el organizador del evento o el staff asignado puede validar ingresos"
         )
 
     # 3. Verify cryptographic QR signature
@@ -80,14 +80,14 @@ async def validate_checkin(
     if not is_valid_sig:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid QR code signature"
+            detail="Firma del código QR inválida"
         )
 
     # 4. Check if ticket has been cancelled
     if ticket.status == "CANCELLED":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ticket has been cancelled"
+            detail="El boleto ha sido cancelado"
         )
 
     # 5. Check if already checked in (Idempotency)

@@ -50,7 +50,7 @@ async def get_event(
     result = await db.execute(select(Event).where(Event.id == id))
     event = result.scalar_one_or_none()
     if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
     return event
 
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
@@ -89,12 +89,12 @@ async def update_event(
     result = await db.execute(select(Event).where(Event.id == id))
     event = result.scalar_one_or_none()
     if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
     
     if event.organizer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to update this event"
+            detail="No tienes permiso para actualizar este evento"
         )
         
     for key, value in event_update.model_dump(exclude_unset=True).items():
@@ -115,12 +115,12 @@ async def delete_event(
     result = await db.execute(select(Event).where(Event.id == id))
     event = result.scalar_one_or_none()
     if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
         
     if event.organizer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to delete this event"
+            detail="No tienes permiso para eliminar este evento"
         )
         
     await db.delete(event)
@@ -139,19 +139,19 @@ async def assign_staff(
     result = await db.execute(select(Event).where(Event.id == id))
     event = result.scalar_one_or_none()
     if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
         
     if event.organizer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not the organizer of this event"
+            detail="No eres el organizador de este evento"
         )
     
     # Verify user being assigned exists
     user_result = await db.execute(select(Profile).where(Profile.id == assignment.user_id))
     staff_profile = user_result.scalar_one_or_none()
     if not staff_profile:
-        raise HTTPException(status_code=404, detail="User to assign as staff not found")
+        raise HTTPException(status_code=404, detail="Usuario a asignar como staff no encontrado")
         
     # Check if already assigned
     existing_result = await db.execute(
@@ -165,7 +165,7 @@ async def assign_staff(
     if existing_result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is already assigned to this event staff"
+            detail="El usuario ya está asignado al staff de este evento"
         )
         
     staff_assign = StaffAssignment(

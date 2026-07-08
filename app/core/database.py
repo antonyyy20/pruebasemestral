@@ -4,12 +4,17 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 from app.core.config import settings
 
-# Create async engine
+# PgBouncer (pooler Supabase, puerto 6543) no soporta prepared statements.
+# Hay que desactivarlos en asyncpg vía connect_args, no solo en la URL.
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    settings.async_database_url,
     echo=False,
     future=True,
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    connect_args={
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0,
+    },
 )
 
 # Create async session factory

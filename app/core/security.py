@@ -28,12 +28,12 @@ async def get_current_user(
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload: missing sub"
+                detail="Token inválido: falta el identificador de usuario"
             )
     except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid authentication token: {str(e)}"
+            detail=f"Token de autenticación inválido: {str(e)}"
         )
     
     # Query database to get user profile
@@ -43,7 +43,7 @@ async def get_current_user(
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found. Please register."
+            detail="Perfil de usuario no encontrado. Por favor regístrate."
         )
     
     return profile
@@ -56,7 +56,7 @@ def require_role(allowed_roles: list[str]):
         if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Operation not permitted for your user role"
+                detail="Operación no permitida para tu rol de usuario"
             )
         return current_user
     return role_checker

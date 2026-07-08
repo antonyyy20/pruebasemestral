@@ -47,13 +47,13 @@ app.include_router(analytics_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Quickvnt API"}
+    return {"message": "Bienvenido a la API de Quickvnt"}
 
 @app.get("/db-test-events")
 async def db_test_events(db: Annotated[AsyncSession, Depends(get_db)]):
     try:
         result = await db.execute(text("SELECT id, title, status FROM public.events"))
         events = [{"id": str(row[0]), "title": row[1], "status": row[2]} for row in result.fetchall()]
-        return {"status": "ok", "database": "connected", "events": events}
+        return {"status": "ok", "database": "conectada", "events": events}
     except Exception as e:
         return {"status": "error", "message": str(e)}

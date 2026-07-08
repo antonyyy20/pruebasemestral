@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 class EventBase(BaseModel):
     title: str
@@ -34,6 +34,11 @@ class EventResponse(EventBase):
     organizer_id: str
     status: str
     created_at: datetime.datetime
+
+    @field_validator("organizer_id", mode="before")
+    @classmethod
+    def coerce_organizer_id(cls, value: object) -> str:
+        return str(value)
 
     class Config:
         from_attributes = True

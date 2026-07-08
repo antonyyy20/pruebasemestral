@@ -38,7 +38,7 @@ async def register_to_event(
         if existing_result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You are already registered for this event"
+                detail="Ya estás registrado en este evento"
             )
 
         # SELECT FOR UPDATE to lock the event row
@@ -49,13 +49,13 @@ async def register_to_event(
         if not event:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Event not found"
+                detail="Evento no encontrado"
             )
         
         if event.status != "PUBLISHED":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot register to an event that is not PUBLISHED"
+                detail="No puedes registrarte en un evento que no está publicado"
             )
 
         # Count current registrations
@@ -69,7 +69,7 @@ async def register_to_event(
         if current_registrations >= event.capacity:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Event registration is full"
+                detail="El evento ya alcanzó su capacidad máxima"
             )
 
         # Generate ticket ID first to sign it
@@ -97,7 +97,7 @@ async def register_to_event(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during registration: {str(e)}"
+            detail=f"Ocurrió un error durante el registro: {str(e)}"
         )
 
 @router.get("/me", response_model=list[TicketResponse])
@@ -122,7 +122,7 @@ async def get_ticket(
     ticket = result.scalar_one_or_none()
 
     if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail="Boleto no encontrado")
 
     # Authorize: ticket owner or event organizer
     if ticket.user_id != current_user.id:
@@ -133,7 +133,7 @@ async def get_ticket(
         if not event or event.organizer_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not authorized to view this ticket"
+                detail="No tienes permiso para ver este boleto"
             )
 
     return ticket
