@@ -39,6 +39,7 @@ import com.example.jhdkasjhd.ui.organizer.EditEventScreen
 import com.example.jhdkasjhd.ui.organizer.MyEventsScreen
 import com.example.jhdkasjhd.ui.profile.ProfileScreen
 import com.example.jhdkasjhd.ui.splash.SplashScreen
+import com.example.jhdkasjhd.ui.splash.WelcomeScreen
 import com.example.jhdkasjhd.ui.tickets.MyTicketsScreen
 import com.example.jhdkasjhd.ui.tickets.RegisterEventScreen
 import com.example.jhdkasjhd.ui.tickets.TicketDetailScreen
@@ -51,7 +52,7 @@ import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
 private sealed class BottomTab(val route: String, val label: String) {
-    data object Home : BottomTab(Routes.MARKETPLACE, "Inicio")
+    data object Home : BottomTab(Routes.MARKETPLACE, "Descubrir")
     data object Categories : BottomTab(Routes.CATEGORIES, "Categorías")
     data object Tickets : BottomTab(Routes.MY_TICKETS, "Boletos")
     data object MyEvents : BottomTab(Routes.MY_EVENTS, "Mis Eventos")
@@ -144,10 +145,20 @@ fun QuickvntNavHost(
                         val destination = if (session != null) {
                             if (session!!.isOrganizer) Routes.MY_EVENTS else Routes.MARKETPLACE
                         } else {
-                            Routes.LOGIN
+                            Routes.WELCOME
                         }
                         navController.navigate(destination) {
                             popUpTo(Routes.SPLASH) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Routes.WELCOME) {
+                WelcomeScreen(
+                    onGetStarted = {
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(Routes.WELCOME) { inclusive = true }
                         }
                     }
                 )

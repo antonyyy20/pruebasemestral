@@ -19,6 +19,7 @@ data class MarketplaceUiState(
     val events: List<EventResponse> = emptyList(),
     val searchQuery: String = "",
     val selectedCategory: String? = null,
+    val savedEventIds: Set<String> = emptySet(),
     val error: String? = null,
     val selectedEvent: EventResponse? = null
 ) {
@@ -41,6 +42,9 @@ data class MarketplaceUiState(
                 matchesCategory && matchesSearch
             }
         }
+
+    val discoverEvents: List<EventResponse>
+        get() = visibleEvents.sortedBy { it.dateStart }
 
     val featuredEvents: List<EventResponse>
         get() = visibleEvents
@@ -101,6 +105,13 @@ class MarketplaceViewModel(
 
     fun selectCategory(category: String) {
         loadEvents(category = category)
+    }
+
+    fun toggleSaved(eventId: String) {
+        val current = _uiState.value.savedEventIds
+        _uiState.value = _uiState.value.copy(
+            savedEventIds = if (eventId in current) current - eventId else current + eventId
+        )
     }
 
     fun loadEventDetail(eventId: String) {

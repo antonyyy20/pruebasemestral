@@ -46,11 +46,17 @@ import com.example.jhdkasjhd.ui.theme.CoinbaseSpacing
 @Composable
 fun MyTicketsScreen(
     onTicketClick: (String) -> Unit,
-    viewModel: TicketsViewModel = quickvntViewModel()
+    viewModel: TicketsViewModel = quickvntViewModel(),
+    authViewModel: com.example.jhdkasjhd.ui.auth.AuthViewModel = quickvntViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val session by authViewModel.session.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.loadMyTickets() }
+    LaunchedEffect(session?.userId) {
+        if (session != null) {
+            viewModel.loadMyTickets()
+        }
+    }
 
     QuickvntScaffold(title = "Mis boletos") { padding ->
         when {

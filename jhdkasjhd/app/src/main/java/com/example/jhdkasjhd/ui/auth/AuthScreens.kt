@@ -1,25 +1,16 @@
 package com.example.jhdkasjhd.ui.auth
 
 import android.util.Patterns
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
@@ -44,13 +35,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import com.example.jhdkasjhd.core.quickvntViewModel
-import com.example.jhdkasjhd.ui.components.CoinbaseFeatureCard
 import com.example.jhdkasjhd.ui.components.CoinbaseInlineMessage
 import com.example.jhdkasjhd.ui.components.CoinbasePrimaryButton
 import com.example.jhdkasjhd.ui.components.CoinbaseTertiaryButton
-import com.example.jhdkasjhd.ui.components.QuickvntTextField
 import com.example.jhdkasjhd.ui.theme.CoinbaseBody
-import com.example.jhdkasjhd.ui.theme.CoinbaseCanvas
 import com.example.jhdkasjhd.ui.theme.CoinbaseInk
 import com.example.jhdkasjhd.ui.theme.CoinbaseMuted
 import com.example.jhdkasjhd.ui.theme.CoinbaseOnPrimary
@@ -72,6 +60,7 @@ fun LoginScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var showValidationErrors by rememberSaveable { mutableStateOf(false) }
+    var googleInfoMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val uiState by viewModel.uiState.collectAsState()
     val session by viewModel.session.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -108,18 +97,67 @@ fun LoginScreen(
         }
     }
 
-    AuthLightLayout(
-        headline = "¡Hola!",
-        subheadline = "Bienvenido de nuevo."
+    AuthFormScaffold(
+        title = "Iniciar sesión",
+        headerContent = {
+            AuthLoginIllustration()
+            Spacer(Modifier.height(CoinbaseSpacing.base))
+            AuthGoogleSignInButton(
+                onClick = {
+                    googleInfoMessage =
+                        "Inicio con Google estará disponible pronto. Usa tu correo por ahora."
+                    if (uiState.error != null) viewModel.clearError()
+                },
+                enabled = !uiState.isLoading
+            )
+            googleInfoMessage?.let { message ->
+                Spacer(Modifier.height(CoinbaseSpacing.sm))
+                CoinbaseInlineMessage(message = message, isError = false)
+            }
+            AuthFormDivider(label = "o")
+        },
+        bottomContent = {
+            uiState.error?.let { message ->
+                CoinbaseInlineMessage(message = message, isError = true)
+                Spacer(Modifier.height(CoinbaseSpacing.sm))
+            }
+
+            CoinbasePrimaryButton(
+                text = "Iniciar sesión",
+                onClick = { attemptLogin() },
+                loading = uiState.isLoading,
+                enabled = !uiState.isLoading,
+                large = true
+            )
+
+            Spacer(Modifier.height(CoinbaseSpacing.base))
+
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(SpanStyle(color = CoinbaseBody)) {
+                        append("¿No tienes cuenta? ")
+                    }
+                    withStyle(SpanStyle(color = CoinbasePrimary)) {
+                        append("Regístrate")
+                    }
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onNavigateRegister)
+                    .padding(vertical = CoinbaseSpacing.xs)
+            )
+        }
     ) {
-        QuickvntTextField(
+        AuthFormTextField(
             value = email,
             onValueChange = {
                 email = it
+                googleInfoMessage = null
                 if (uiState.error != null) viewModel.clearError()
             },
             label = "Correo electrónico",
-            placeholder = "juan@ejemplo.com",
             error = emailError,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
@@ -128,16 +166,16 @@ fun LoginScreen(
             keyboardActions = KeyboardActions(onNext = { passwordFocusRequester.requestFocus() })
         )
 
-        Spacer(modifier = Modifier.height(CoinbaseSpacing.base))
+        Spacer(modifier = Modifier.height(CoinbaseSpacing.sm))
 
-        QuickvntTextField(
+        AuthFormTextField(
             value = password,
             onValueChange = {
                 password = it
+                googleInfoMessage = null
                 if (uiState.error != null) viewModel.clearError()
             },
             label = "Contraseña",
-            placeholder = "Ingresa tu contraseña",
             isPassword = true,
             passwordVisible = passwordVisible,
             onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
@@ -154,39 +192,6 @@ fun LoginScreen(
                 .align(Alignment.End)
                 .padding(top = CoinbaseSpacing.xs)
         )
-
-        uiState.error?.let { message ->
-            Spacer(modifier = Modifier.height(CoinbaseSpacing.sm))
-            CoinbaseInlineMessage(message = message, isError = true)
-        }
-
-        Spacer(modifier = Modifier.height(CoinbaseSpacing.lg))
-
-        CoinbasePrimaryButton(
-            text = "Iniciar sesión",
-            onClick = { attemptLogin() },
-            loading = uiState.isLoading,
-            enabled = !uiState.isLoading
-        )
-
-        Spacer(modifier = Modifier.height(CoinbaseSpacing.lg))
-
-        Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = CoinbaseBody)) {
-                    append("¿No tienes cuenta? ")
-                }
-                withStyle(SpanStyle(color = CoinbasePrimary)) {
-                    append("Regístrate")
-                }
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onNavigateRegister)
-                .padding(vertical = CoinbaseSpacing.xs)
-        )
     }
 }
 
@@ -196,13 +201,57 @@ fun RegisterScreen(
     onRegisterSuccess: (isOrganizer: Boolean) -> Unit,
     viewModel: AuthViewModel = quickvntViewModel()
 ) {
-    var name by rememberSaveable { mutableStateOf("") }
+    var firstName by rememberSaveable { mutableStateOf("") }
+    var lastName by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
+    var confirmEmail by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var role by rememberSaveable { mutableStateOf("ATTENDEE") }
+    var showValidationErrors by rememberSaveable { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val session by viewModel.session.collectAsState()
+
+    val trimmedEmail = email.trim()
+    val trimmedConfirmEmail = confirmEmail.trim()
+
+    val firstNameError = if (showValidationErrors && firstName.isBlank()) {
+        "Ingresa tu nombre"
+    } else null
+    val lastNameError = if (showValidationErrors && lastName.isBlank()) {
+        "Ingresa tu apellido"
+    } else null
+    val emailError = when {
+        !showValidationErrors -> null
+        trimmedEmail.isBlank() -> "Ingresa tu correo electrónico"
+        !isValidEmail(trimmedEmail) -> "Ingresa un correo electrónico válido"
+        else -> null
+    }
+    val confirmEmailError = when {
+        !showValidationErrors -> null
+        trimmedConfirmEmail.isBlank() -> "Confirma tu correo electrónico"
+        trimmedConfirmEmail != trimmedEmail -> "Los correos no coinciden"
+        else -> null
+    }
+    val passwordError = when {
+        !showValidationErrors -> null
+        password.isBlank() -> "Ingresa tu contraseña"
+        password.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
+        else -> null
+    }
+
+    val isFormValid = firstName.isNotBlank() &&
+        lastName.isNotBlank() &&
+        isValidEmail(trimmedEmail) &&
+        trimmedConfirmEmail == trimmedEmail &&
+        password.length >= 6
+
+    fun attemptRegister() {
+        showValidationErrors = true
+        if (!isFormValid || uiState.isLoading) return
+        val fullName = "${firstName.trim()} ${lastName.trim()}".trim()
+        viewModel.register(trimmedEmail, password, fullName, role.uppercase())
+    }
 
     LaunchedEffect(uiState.success, session) {
         if (uiState.success && session != null) {
@@ -210,46 +259,114 @@ fun RegisterScreen(
         }
     }
 
-    AuthLightLayout(
-        headline = "Únete a Quickvnt",
-        subheadline = "Crea tu cuenta para comenzar."
+    AuthFormScaffold(
+        title = "Crear una cuenta",
+        onBack = onNavigateLogin,
+        onClose = onNavigateLogin,
+        bottomContent = {
+            AuthLegalNotice()
+            Spacer(Modifier.height(CoinbaseSpacing.base))
+
+            uiState.error?.let { message ->
+                CoinbaseInlineMessage(message = message, isError = true)
+                Spacer(Modifier.height(CoinbaseSpacing.sm))
+            }
+
+            CoinbasePrimaryButton(
+                text = "Registrarse",
+                onClick = { attemptRegister() },
+                loading = uiState.isLoading,
+                enabled = !uiState.isLoading,
+                large = true
+            )
+
+            Spacer(Modifier.height(CoinbaseSpacing.sm))
+
+            CoinbaseTertiaryButton(
+                text = "¿Ya tienes cuenta? Inicia sesión",
+                onClick = onNavigateLogin,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     ) {
-        QuickvntTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = "Nombre completo",
-            placeholder = "Juan Pérez"
-        )
-
-        Spacer(modifier = Modifier.height(CoinbaseSpacing.base))
-
-        QuickvntTextField(
+        AuthFormTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                if (uiState.error != null) viewModel.clearError()
+            },
             label = "Correo electrónico",
-            placeholder = "juan@ejemplo.com",
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-        )
-
-        Spacer(modifier = Modifier.height(CoinbaseSpacing.base))
-
-        QuickvntTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = "Contraseña",
-            placeholder = "Al menos 6 caracteres",
-            isPassword = true,
-            passwordVisible = passwordVisible,
-            onTogglePasswordVisibility = { passwordVisible = !passwordVisible }
+            error = emailError,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                imeAction = ImeAction.Next
+            )
         )
 
         Spacer(modifier = Modifier.height(CoinbaseSpacing.sm))
+
+        AuthFormTextField(
+            value = confirmEmail,
+            onValueChange = {
+                confirmEmail = it
+                if (uiState.error != null) viewModel.clearError()
+            },
+            label = "Confirmar correo electrónico",
+            error = confirmEmailError,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                imeAction = ImeAction.Next
+            )
+        )
+
+        Spacer(modifier = Modifier.height(CoinbaseSpacing.sm))
+
+        AuthFormTextField(
+            value = firstName,
+            onValueChange = { firstName = it },
+            label = "Nombre",
+            error = firstNameError,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+        )
+
+        Spacer(modifier = Modifier.height(CoinbaseSpacing.sm))
+
+        AuthFormTextField(
+            value = lastName,
+            onValueChange = { lastName = it },
+            label = "Apellido",
+            error = lastNameError,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+        )
+
+        Spacer(modifier = Modifier.height(CoinbaseSpacing.sm))
+
+        Column {
+            AuthFormTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    if (uiState.error != null) viewModel.clearError()
+                },
+                label = "Contraseña",
+                isPassword = true,
+                passwordVisible = passwordVisible,
+                onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
+                error = passwordError,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { attemptRegister() })
+            )
+            AuthPasswordStrengthBar(password = password)
+        }
+
+        Spacer(modifier = Modifier.height(CoinbaseSpacing.base))
 
         Text(
             text = "Tipo de cuenta",
             style = MaterialTheme.typography.labelMedium,
             color = CoinbaseMuted
         )
+        Spacer(Modifier.height(CoinbaseSpacing.xs))
         Row(horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.xs)) {
             FilterChip(
                 selected = role == "ATTENDEE",
@@ -273,76 +390,6 @@ fun RegisterScreen(
                     labelColor = CoinbaseInk
                 )
             )
-        }
-
-        uiState.error?.let { message ->
-            Spacer(modifier = Modifier.height(CoinbaseSpacing.sm))
-            CoinbaseInlineMessage(message = message, isError = true)
-        }
-
-        Spacer(modifier = Modifier.height(CoinbaseSpacing.lg))
-
-        CoinbasePrimaryButton(
-            text = "Registrarse",
-            onClick = { viewModel.register(email.trim(), password, name.trim(), role.uppercase()) },
-            loading = uiState.isLoading,
-            enabled = name.isNotBlank() && email.isNotBlank() && password.length >= 6
-        )
-
-        Spacer(modifier = Modifier.height(CoinbaseSpacing.lg))
-
-        CoinbaseTertiaryButton(
-            text = "¿Ya tienes cuenta? Inicia sesión",
-            onClick = onNavigateLogin,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-private fun AuthLightLayout(
-    headline: String,
-    subheadline: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CoinbaseCanvas)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = CoinbaseSpacing.lg),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(CoinbaseSpacing.xxl))
-
-            Text(
-                text = headline,
-                style = MaterialTheme.typography.displaySmall,
-                color = CoinbaseInk,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = subheadline,
-                style = MaterialTheme.typography.bodyLarge,
-                color = CoinbaseBody,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = CoinbaseSpacing.xs)
-            )
-
-            Spacer(modifier = Modifier.height(CoinbaseSpacing.xl))
-
-            CoinbaseFeatureCard {
-                content()
-            }
-
-            Spacer(modifier = Modifier.height(CoinbaseSpacing.xl))
         }
     }
 }

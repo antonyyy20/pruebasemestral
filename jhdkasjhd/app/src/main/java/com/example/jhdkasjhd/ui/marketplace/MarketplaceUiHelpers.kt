@@ -2,6 +2,7 @@ package com.example.jhdkasjhd.ui.marketplace
 
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.jhdkasjhd.data.dto.EventResponse
 import com.example.jhdkasjhd.ui.theme.CoinbaseAccentYellow
 import com.example.jhdkasjhd.ui.theme.CoinbasePrimary
 import com.example.jhdkasjhd.ui.theme.CoinbaseSemanticUp
@@ -43,10 +44,111 @@ internal fun formatEventDate(isoDate: String?): String {
     return try {
         val instant = Instant.parse(isoDate)
         val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
-        val formatter = DateTimeFormatter.ofPattern("d MMMM", Locale("es", "PA"))
+        val formatter = DateTimeFormatter.ofPattern("d MMMM", Locale.forLanguageTag("es-PA"))
         localDate.format(formatter)
     } catch (_: Exception) {
         isoDate.take(10)
+    }
+}
+
+internal fun formatEventDiscoverMeta(event: EventResponse): String {
+    val datePart = formatEventDiscoverDate(event.dateStart)
+    val timePart = formatEventDiscoverTime(event.dateStart)
+    val venue = event.location.trim().ifBlank { "Por confirmar" }
+    return listOf(datePart, timePart, venue).joinToString(" • ")
+}
+
+private fun formatEventDiscoverDate(isoDate: String?): String {
+    if (isoDate.isNullOrBlank()) return "Próximamente"
+    return try {
+        val zoned = Instant.parse(isoDate).atZone(ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("EEE, d MMM", Locale.forLanguageTag("es-PA"))
+        zoned.format(formatter).replaceFirstChar { it.titlecase(Locale.getDefault()) }
+    } catch (_: Exception) {
+        isoDate.take(10)
+    }
+}
+
+private fun formatEventDiscoverTime(isoDate: String?): String {
+    if (isoDate.isNullOrBlank()) return "Hora por confirmar"
+    return try {
+        val zoned = Instant.parse(isoDate).atZone(ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("h a", Locale.forLanguageTag("es-PA"))
+        zoned.format(formatter).lowercase(Locale.getDefault())
+    } catch (_: Exception) {
+        "Hora por confirmar"
+    }
+}
+
+internal fun formatEventDetailDateTime(isoDate: String?): String {
+    if (isoDate.isNullOrBlank()) return "Fecha por confirmar"
+    return try {
+        val zoned = Instant.parse(isoDate).atZone(ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("d MMM 'a las' h a", Locale.forLanguageTag("es-PA"))
+        zoned.format(formatter).lowercase(Locale.getDefault())
+    } catch (_: Exception) {
+        isoDate.take(16).replace('T', ' ')
+    }
+}
+
+internal fun formatEventLocationLine(event: EventResponse): String {
+    val category = event.category.trim().ifBlank { "Evento" }
+    val location = event.location.trim().ifBlank { "Ubicación por confirmar" }
+    return "$category • $location"
+}
+
+internal fun formatEventDuration(event: EventResponse): String {
+    val start = formatEventDetailDateTime(event.dateStart)
+    val end = formatEventDetailTimeOnly(event.dateEnd)
+    return if (end.isBlank()) start else "$start – $end"
+}
+
+internal fun formatEventDayOfWeek(isoDate: String?): String {
+    if (isoDate.isNullOrBlank()) return "Por confirmar"
+    return try {
+        val zoned = Instant.parse(isoDate).atZone(ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("EEEE", Locale.forLanguageTag("es-PA"))
+        zoned.format(formatter).replaceFirstChar { it.titlecase(Locale.getDefault()) }
+    } catch (_: Exception) {
+        "Por confirmar"
+    }
+}
+
+internal fun formatEventTimeRange(dateStart: String?, dateEnd: String?): String {
+    val start = formatEventDetailTimeOnly(dateStart)
+    val end = formatEventDetailTimeOnly(dateEnd)
+    return when {
+        start.isBlank() && end.isBlank() -> "Horario por confirmar"
+        end.isBlank() -> start
+        start.isBlank() -> end
+        else -> "$start a $end"
+    }
+}
+
+private fun formatEventDetailTimeOnly(isoDate: String?): String {
+    if (isoDate.isNullOrBlank()) return ""
+    return try {
+        val zoned = Instant.parse(isoDate).atZone(ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("h a", Locale.forLanguageTag("es-PA"))
+        zoned.format(formatter).lowercase(Locale.getDefault())
+    } catch (_: Exception) {
+        ""
+    }
+}
+
+internal fun hasCustomForm(event: EventResponse): Boolean {
+    return event.customFormSchema.isNotEmpty()
+}
+
+internal fun isEndingSoon(isoDate: String?): Boolean {
+    if (isoDate.isNullOrBlank()) return false
+    return try {
+        val eventInstant = Instant.parse(isoDate)
+        val now = Instant.now()
+        val threeDays = 3L * 24 * 60 * 60
+        eventInstant.isAfter(now) && eventInstant.epochSecond - now.epochSecond <= threeDays
+    } catch (_: Exception) {
+        false
     }
 }
 

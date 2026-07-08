@@ -1,6 +1,7 @@
 package com.example.jhdkasjhd.data.repository
 
 import com.example.jhdkasjhd.core.data.TokenStore
+import com.example.jhdkasjhd.core.network.NetworkErrors
 import com.example.jhdkasjhd.core.network.QuickvntApi
 import com.example.jhdkasjhd.data.dto.LoginRequest
 import com.example.jhdkasjhd.data.dto.ProfileResponse
@@ -15,10 +16,10 @@ class AuthRepository(
     val sessionFlow = tokenStore.sessionFlow
 
     suspend fun login(email: String, password: String): Result<TokenResponse> = runCatching {
-        val response = api.login(LoginRequest(email, password))
+        val response = api.login(LoginRequest(email.trim(), password))
         persistSession(response)
         response
-    }
+    }.mapError()
 
     suspend fun register(
         email: String,
@@ -26,17 +27,25 @@ class AuthRepository(
         name: String,
         role: String
     ): Result<TokenResponse> = runCatching {
-        val response = api.register(RegisterRequest(email, password, name, role))
+        val response = api.register(RegisterRequest(email.trim(), password, name, role))
         persistSession(response)
         response
-    }
+    }.mapError()
 
     suspend fun getProfile(): Result<ProfileResponse> = runCatching {
         api.getProfile()
     }
 
     suspend fun updateProfile(name: String): Result<ProfileResponse> = runCatching {
-        api.updateProfile(ProfileUpdateRequest(name = name))
+        val response = api.updateProfile(ProfileUpdateRequest(name = name))
+        tokenStore.updateUserName(response.name)
+        response
+    }
+
+    val userBioFlow = tokenStore.userBioFlow
+
+    suspend fun saveUserBio(bio: String) {
+        tokenStore.updateUserBio(bio)
     }
 
     suspend fun logout() {
@@ -53,3 +62,8 @@ class AuthRepository(
         )
     }
 }
+
+private fun <T> Result<T>.mapError(): Result<T> = fold(
+    onSuccess = { Result.success(it) },
+    onFailure = { Result.failure(IllegalStateException(NetworkErrors.userMessage(it))) }
+)

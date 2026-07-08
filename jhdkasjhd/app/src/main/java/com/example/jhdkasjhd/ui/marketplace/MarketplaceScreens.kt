@@ -1,20 +1,19 @@
 package com.example.jhdkasjhd.ui.marketplace
 
+import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,22 +21,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import com.example.jhdkasjhd.core.quickvntViewModel
-import com.example.jhdkasjhd.core.util.StatusLabels
-import com.example.jhdkasjhd.ui.auth.AuthViewModel
-import com.example.jhdkasjhd.ui.components.CoinbaseDetailRow
 import com.example.jhdkasjhd.ui.components.CoinbaseFeatureCard
-import com.example.jhdkasjhd.ui.components.CoinbasePrimaryButton
-import com.example.jhdkasjhd.ui.components.CoinbaseSecondaryButton
 import com.example.jhdkasjhd.ui.components.ErrorMessage
 import com.example.jhdkasjhd.ui.components.LoadingBox
 import com.example.jhdkasjhd.ui.components.QuickvntScaffold
+import com.example.jhdkasjhd.ui.theme.CoinbaseCanvas
 import com.example.jhdkasjhd.ui.theme.CoinbaseInk
 import com.example.jhdkasjhd.ui.theme.CoinbaseMuted
-import com.example.jhdkasjhd.ui.theme.CoinbaseRadiusXl
 import com.example.jhdkasjhd.ui.theme.CoinbaseSpacing
+import com.example.jhdkasjhd.ui.theme.CoinbaseSurfaceSoft
 
 @Composable
 fun MarketplaceScreen(
@@ -45,11 +39,10 @@ fun MarketplaceScreen(
     onSeeAllCategories: () -> Unit,
     onCategoryClick: (String) -> Unit,
     initialCategory: String? = null,
-    viewModel: MarketplaceViewModel = quickvntViewModel(),
-    authViewModel: AuthViewModel = quickvntViewModel()
+    viewModel: MarketplaceViewModel = quickvntViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val session by authViewModel.session.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(initialCategory) {
         if (initialCategory != null) {
@@ -58,27 +51,37 @@ fun MarketplaceScreen(
     }
 
     when {
-        uiState.isLoading && uiState.events.isEmpty() -> LoadingBox()
+        uiState.isLoading && uiState.events.isEmpty() -> LoadingBox(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(CoinbaseCanvas)
+        )
         uiState.error != null && uiState.events.isEmpty() -> ErrorMessage(
             message = uiState.error!!,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(CoinbaseCanvas)
+                .padding(CoinbaseSpacing.base),
             onRetry = { viewModel.loadEvents(initialCategory) }
         )
         else -> LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(CoinbaseCanvas),
             contentPadding = PaddingValues(
                 start = CoinbaseSpacing.base,
                 end = CoinbaseSpacing.base,
                 top = CoinbaseSpacing.base,
                 bottom = CoinbaseSpacing.xl
             ),
-            verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.lg)
+            verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.xl)
         ) {
             item {
-                DiscoverHeader(
-                    userName = session?.name,
-                    locationLabel = "Explorar eventos",
+                EventbriteDiscoverSearchBar(
                     searchQuery = uiState.searchQuery,
-                    onSearchChange = viewModel::updateSearchQuery
+                    onSearchChange = viewModel::updateSearchQuery,
+                    locationLabel = "Panamá",
+                    onFilterClick = onSeeAllCategories
                 )
             }
 
@@ -91,64 +94,45 @@ fun MarketplaceScreen(
                 }
             }
 
-            if (uiState.categories.isNotEmpty()) {
+            if (uiState.discoverEvents.isEmpty()) {
                 item {
-                    SectionHeader(
-                        title = "Categorías",
-                        actionLabel = "Ver todas",
-                        onActionClick = onSeeAllCategories
-                    )
-                }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)) {
-                        items(uiState.categories.take(6), key = { it.name }) { category ->
-                            CategoryPreviewCard(
-                                category = category,
-                                onClick = { onCategoryClick(category.name) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (uiState.featuredEvents.isNotEmpty()) {
-                item {
-                    SectionHeader(title = "Próximos eventos")
-                }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base)) {
-                        items(uiState.featuredEvents, key = { it.id }) { event ->
-                            FeaturedEventCard(
-                                event = event,
-                                onClick = { onEventClick(event.id) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            item {
-                DiscoverDivider()
-            }
-
-            item {
-                SectionHeader(title = "Eventos cerca de ti")
-            }
-
-            if (uiState.nearbyEvents.isEmpty()) {
-                item {
-                    CoinbaseFeatureCard {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = CoinbaseSpacing.xl),
+                        verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
+                    ) {
                         Text(
-                            text = "No encontramos eventos con esos filtros.",
+                            text = "No encontramos eventos",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = CoinbaseInk
+                        )
+                        Text(
+                            text = "Prueba con otra búsqueda o explora las categorías.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = CoinbaseMuted
                         )
                     }
                 }
             } else {
-                items(uiState.nearbyEvents, key = { it.id }) { event ->
-                    NearbyEventRow(
+                items(uiState.discoverEvents, key = { it.id }) { event ->
+                    DiscoverEventCard(
                         event = event,
+                        isSaved = event.id in uiState.savedEventIds,
+                        onToggleSave = { viewModel.toggleSaved(event.id) },
+                        onShare = {
+                            val shareText = buildString {
+                                append(event.title)
+                                append("\n")
+                                append(formatEventDiscoverMeta(event))
+                                append("\nDesde $0")
+                            }
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Compartir evento"))
+                        },
                         onClick = { onEventClick(event.id) }
                     )
                 }
@@ -217,6 +201,7 @@ fun EventDetailScreen(
     viewModel: MarketplaceViewModel = quickvntViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(eventId) {
         viewModel.loadEventDetail(eventId)
@@ -224,66 +209,69 @@ fun EventDetailScreen(
 
     val event = uiState.selectedEvent
 
-    QuickvntScaffold(title = event?.title ?: "Detalle del evento", onBack = onBack) { padding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CoinbaseSurfaceSoft)
+    ) {
         when {
-            uiState.isLoading && event == null -> LoadingBox(Modifier.padding(padding))
-            uiState.error != null -> ErrorMessage(uiState.error!!, Modifier.padding(padding)) {
-                viewModel.loadEventDetail(eventId)
-            }
-            event != null -> Column(
+            uiState.isLoading && event == null -> LoadingBox(Modifier.fillMaxSize())
+            uiState.error != null && event == null -> ErrorMessage(
+                message = uiState.error!!,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
-                verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base)
-            ) {
-                Box(
+                    .padding(CoinbaseSpacing.base),
+                onRetry = { viewModel.loadEventDetail(eventId) }
+            )
+            event != null -> Column(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .padding(horizontal = CoinbaseSpacing.base)
-                        .clip(CoinbaseRadiusXl)
-                ) {
-                    EventImage(
-                        bannerUrl = event.bannerUrl,
-                        category = event.category,
-                        modifier = Modifier.fillMaxSize()
+                        .weight(1f)
+                        .background(CoinbaseSurfaceSoft),
+                    contentPadding = PaddingValues(
+                        top = CoinbaseSpacing.base,
+                        bottom = CoinbaseSpacing.base
                     )
-                }
-
-                Column(
-                    modifier = Modifier.padding(horizontal = CoinbaseSpacing.base),
-                    verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base)
                 ) {
-                CoinbaseFeatureCard {
-                    Text(event.description, style = MaterialTheme.typography.bodyLarge, color = CoinbaseInk)
-                }
-
-                CoinbaseFeatureCard {
-                    Column(verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)) {
-                        CoinbaseDetailRow("Ubicación", event.location)
-                        CoinbaseDetailRow("Categoría", event.category)
-                        CoinbaseDetailRow("Inicio", event.dateStart)
-                        CoinbaseDetailRow("Fin", event.dateEnd)
-                        CoinbaseDetailRow("Capacidad", event.capacity.toString())
-                        CoinbaseDetailRow("Estado", StatusLabels.eventStatus(event.status))
+                    item {
+                        EventDetailContent(
+                            event = event,
+                            isOrganizer = isOrganizer,
+                            isSaved = event.id in uiState.savedEventIds,
+                            onBack = onBack,
+                            onShare = {
+                                val shareText = buildString {
+                                    append(event.title)
+                                    append("\n")
+                                    append(formatEventLocationLine(event))
+                                    append("\n")
+                                    append(formatEventDetailDateTime(event.dateStart))
+                                }
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Compartir evento"))
+                            },
+                            onToggleSave = { viewModel.toggleSaved(event.id) },
+                            onRegisterClick = onRegisterClick,
+                            onAnalyticsClick = onAnalyticsClick,
+                            onScanClick = onScanClick
+                        )
                     }
                 }
 
-                if (!isOrganizer && event.status == "PUBLISHED") {
-                    CoinbasePrimaryButton(
-                        text = "Registrarme al evento",
-                        onClick = onRegisterClick
-                    )
-                }
-
                 if (isOrganizer) {
-                    CoinbasePrimaryButton(text = "Ver analíticas", onClick = onAnalyticsClick)
-                    CoinbaseSecondaryButton(
-                        text = "Escanear QR de ingreso",
-                        onClick = onScanClick,
-                        modifier = Modifier.fillMaxWidth()
+                    EventDetailOrganizerBottomBar(
+                        event = event,
+                        onAnalyticsClick = onAnalyticsClick
                     )
-                }
+                } else {
+                    EventDetailAttendeeBottomBar(
+                        event = event,
+                        onRegisterClick = onRegisterClick,
+                        enabled = event.status == "PUBLISHED"
+                    )
                 }
             }
         }

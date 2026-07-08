@@ -25,7 +25,11 @@ class QuickvntViewModelFactory(
             modelClass.isAssignableFrom(MarketplaceViewModel::class.java) ->
                 MarketplaceViewModel(container.eventRepository) as T
             modelClass.isAssignableFrom(TicketsViewModel::class.java) ->
-                TicketsViewModel(container.ticketRepository, container.eventRepository) as T
+                TicketsViewModel(
+                    container.ticketRepository,
+                    container.eventRepository,
+                    container.authRepository
+                ) as T
             modelClass.isAssignableFrom(OrganizerViewModel::class.java) ->
                 OrganizerViewModel(container.eventRepository, container.authRepository) as T
             modelClass.isAssignableFrom(CheckinViewModel::class.java) ->

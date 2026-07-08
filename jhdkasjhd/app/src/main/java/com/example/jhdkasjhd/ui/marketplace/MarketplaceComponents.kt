@@ -2,6 +2,8 @@ package com.example.jhdkasjhd.ui.marketplace
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,15 +16,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,8 +54,195 @@ import com.example.jhdkasjhd.ui.theme.CoinbasePrimary
 import com.example.jhdkasjhd.ui.theme.CoinbaseRadiusLg
 import com.example.jhdkasjhd.ui.theme.CoinbaseRadiusMd
 import com.example.jhdkasjhd.ui.theme.CoinbaseRadiusXl
+import com.example.jhdkasjhd.ui.theme.CoinbaseSemanticUp
 import com.example.jhdkasjhd.ui.theme.CoinbaseSpacing
 import com.example.jhdkasjhd.ui.theme.CoinbaseSurfaceSoft
+
+private val DiscoverImageRadius = RoundedCornerShape(12.dp)
+
+@Composable
+internal fun EventbriteDiscoverSearchBar(
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+    locationLabel: String = "Panamá",
+    onFilterClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clip(CoinbaseRadiusPill)
+                .border(1.dp, CoinbaseHairline, CoinbaseRadiusPill)
+                .background(CoinbaseCanvas)
+                .padding(horizontal = CoinbaseSpacing.base, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = CoinbaseInk,
+                modifier = Modifier.size(22.dp)
+            )
+            BasicTextField(
+                value = searchQuery,
+                onValueChange = onSearchChange,
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    color = CoinbaseInk,
+                    fontWeight = FontWeight.SemiBold
+                ),
+                interactionSource = remember { MutableInteractionSource() },
+                decorationBox = { inner ->
+                    if (searchQuery.isEmpty()) {
+                        Column {
+                            Text(
+                                text = "Encuentra qué hacer",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CoinbaseMuted
+                            )
+                            Text(
+                                text = "en $locationLabel",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CoinbaseInk,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    inner()
+                }
+            )
+        }
+
+        IconButton(
+            onClick = onFilterClick,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .border(1.dp, CoinbaseHairline, CircleShape)
+                .background(CoinbaseCanvas)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Tune,
+                contentDescription = "Filtrar",
+                tint = CoinbaseInk,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+@Composable
+internal fun DiscoverEventCard(
+    event: EventResponse,
+    isSaved: Boolean,
+    onToggleSave: () -> Unit,
+    onShare: () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1.55f)
+                .clip(DiscoverImageRadius)
+        ) {
+            EventImage(
+                bannerUrl = event.bannerUrl,
+                category = event.category,
+                modifier = Modifier.fillMaxSize()
+            )
+            if (isEndingSoon(event.dateStart)) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(CoinbaseSpacing.sm)
+                        .clip(CoinbaseRadiusMd)
+                        .background(CoinbaseSemanticUp)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "⏳",
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    Text(
+                        text = "CUPOS LIMITADOS",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CoinbaseOnPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = CoinbaseInk,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = onShare,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Compartir",
+                    tint = CoinbaseInk,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(
+                onClick = onToggleSave,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (isSaved) "Quitar de guardados" else "Guardar",
+                    tint = if (isSaved) CoinbasePrimary else CoinbaseInk,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Text(
+            text = formatEventDiscoverMeta(event),
+            style = MaterialTheme.typography.bodyMedium,
+            color = CoinbaseMuted,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Text(
+            text = "Desde $0",
+            style = MaterialTheme.typography.bodyLarge,
+            color = CoinbaseInk,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
 
 @Composable
 internal fun DiscoverHeader(

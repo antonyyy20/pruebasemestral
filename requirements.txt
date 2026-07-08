@@ -8,6 +8,7 @@ greenlet>=3.0.0
 asyncpg>=0.29.0
 supabase>=2.4.0
 python-jose[cryptography]>=3.3.0
+PyJWT[crypto]>=2.8.0
 qrcode>=7.4.2
 pillow>=10.2.0
 python-multipart>=0.0.9

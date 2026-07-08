@@ -4,11 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jhdkasjhd.data.dto.EventResponse
 import com.example.jhdkasjhd.data.dto.TicketResponse
+import com.example.jhdkasjhd.data.repository.AuthRepository
 import com.example.jhdkasjhd.data.repository.EventRepository
 import com.example.jhdkasjhd.data.repository.TicketRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 data class TicketsUiState(
@@ -22,7 +24,8 @@ data class TicketsUiState(
 
 class TicketsViewModel(
     private val ticketRepository: TicketRepository,
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TicketsUiState())
@@ -31,6 +34,14 @@ class TicketsViewModel(
     fun loadMyTickets() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val session = authRepository.sessionFlow.first()
+            if (session == null) {
+                _uiState.value = TicketsUiState(
+                    error = "Debes iniciar sesión para ver tus boletos"
+                )
+                return@launch
+            }
+
             ticketRepository.myTickets()
                 .onSuccess { tickets ->
                     _uiState.value = TicketsUiState(tickets = tickets)
@@ -44,6 +55,15 @@ class TicketsViewModel(
     fun loadTicket(ticketId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val session = authRepository.sessionFlow.first()
+            if (session == null) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Debes iniciar sesión para ver este boleto"
+                )
+                return@launch
+            }
+
             ticketRepository.getTicket(ticketId)
                 .onSuccess { ticket ->
                     _uiState.value = _uiState.value.copy(isLoading = false, selectedTicket = ticket)
@@ -76,6 +96,15 @@ class TicketsViewModel(
     fun registerToEvent(eventId: String, formResponse: Map<String, Any?>) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, registrationSuccess = false)
+            val session = authRepository.sessionFlow.first()
+            if (session == null) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Debes iniciar sesión para registrarte"
+                )
+                return@launch
+            }
+
             ticketRepository.registerToEvent(eventId, formResponse)
                 .onSuccess { ticket ->
                     _uiState.value = _uiState.value.copy(

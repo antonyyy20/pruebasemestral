@@ -14,6 +14,7 @@ class AuthInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val accessToken = tokenStore.getAccessTokenSync()
+            ?: runBlocking { tokenStore.getAccessToken() }
 
         val authenticatedRequest = if (!accessToken.isNullOrBlank()) {
             original.newBuilder()
@@ -31,7 +32,9 @@ class AuthInterceptor(
 
         response.close()
 
-        val refreshToken = tokenStore.getRefreshTokenSync() ?: return chain.proceed(original)
+        val refreshToken = tokenStore.getRefreshTokenSync()
+            ?: runBlocking { tokenStore.getRefreshToken() }
+            ?: return chain.proceed(original)
 
         return runBlocking {
             try {

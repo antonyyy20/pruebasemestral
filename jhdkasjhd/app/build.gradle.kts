@@ -66,10 +66,12 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.moshi)
     implementation(libs.okhttp)
+    implementation(libs.okhttp.dnsoverhttps)
     implementation(libs.okhttp.logging)
     implementation(libs.moshi)
 
     implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
     implementation(libs.zxing.embedded)
 
     testImplementation(libs.junit)

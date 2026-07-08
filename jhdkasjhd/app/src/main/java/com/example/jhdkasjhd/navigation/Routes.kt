@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 
 object Routes {
     const val SPLASH = "splash"
+    const val WELCOME = "welcome"
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val MARKETPLACE = "marketplace"

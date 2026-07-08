@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "quickvnt_session")
 
@@ -33,6 +34,7 @@ class TokenStore(context: Context) {
         val USER_ID = stringPreferencesKey("user_id")
         val USER_NAME = stringPreferencesKey("user_name")
         val USER_ROLE = stringPreferencesKey("user_role")
+        val USER_BIO = stringPreferencesKey("user_bio")
     }
 
     val sessionFlow: Flow<UserSession?> = appContext.dataStore.data.map { prefs ->
@@ -59,9 +61,18 @@ class TokenStore(context: Context) {
     }
 
     init {
+        runBlocking(Dispatchers.IO) {
+            preloadCache()
+        }
         scope.launch {
             sessionFlow.first()
         }
+    }
+
+    private suspend fun preloadCache() {
+        val prefs = appContext.dataStore.data.first()
+        cachedAccessToken = prefs[Keys.ACCESS_TOKEN]
+        cachedRefreshToken = prefs[Keys.REFRESH_TOKEN]
     }
 
     fun getAccessTokenSync(): String? = cachedAccessToken
@@ -96,6 +107,22 @@ class TokenStore(context: Context) {
         cachedAccessToken = null
         cachedRefreshToken = null
         appContext.dataStore.edit { it.clear() }
+    }
+
+    suspend fun updateUserName(name: String) {
+        appContext.dataStore.edit { prefs ->
+            prefs[Keys.USER_NAME] = name
+        }
+    }
+
+    val userBioFlow: Flow<String> = appContext.dataStore.data.map { prefs ->
+        prefs[Keys.USER_BIO].orEmpty()
+    }
+
+    suspend fun updateUserBio(bio: String) {
+        appContext.dataStore.edit { prefs ->
+            prefs[Keys.USER_BIO] = bio
+        }
     }
 }
 

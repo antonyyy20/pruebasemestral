@@ -105,7 +105,7 @@ async def get_my_tickets(
     current_user: Annotated[Profile, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)]
 ):
-    """Retrieve all tickets belonging to the current user."""
+    """Retrieve all tickets belonging to the authenticated user (Bearer token required)."""
     query = select(Ticket).where(Ticket.user_id == current_user.id)
     result = await db.execute(query)
     return result.scalars().all()

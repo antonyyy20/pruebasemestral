@@ -17,6 +17,14 @@ data class AuthUiState(
     val success: Boolean = false
 )
 
+data class ProfileUiState(
+    val isLoading: Boolean = false,
+    val isSaving: Boolean = false,
+    val error: String? = null,
+    val saved: Boolean = false,
+    val profile: com.example.jhdkasjhd.data.dto.ProfileResponse? = null
+)
+
 class AuthViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
@@ -26,6 +34,12 @@ class AuthViewModel(
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    private val _profileUiState = MutableStateFlow(ProfileUiState())
+    val profileUiState: StateFlow<ProfileUiState> = _profileUiState.asStateFlow()
+
+    val userBio: StateFlow<String> = authRepository.userBioFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
@@ -52,6 +66,55 @@ class AuthViewModel(
     fun logout() {
         viewModelScope.launch {
             authRepository.logout()
+            _profileUiState.value = ProfileUiState()
         }
+    }
+
+    fun loadProfile() {
+        viewModelScope.launch {
+            _profileUiState.value = _profileUiState.value.copy(isLoading = true, error = null)
+            authRepository.getProfile()
+                .onSuccess { profile ->
+                    _profileUiState.value = _profileUiState.value.copy(
+                        isLoading = false,
+                        profile = profile
+                    )
+                }
+                .onFailure {
+                    _profileUiState.value = _profileUiState.value.copy(
+                        isLoading = false,
+                        error = it.message ?: "No se pudo cargar el perfil"
+                    )
+                }
+        }
+    }
+
+    fun updateProfile(name: String, bio: String) {
+        viewModelScope.launch {
+            _profileUiState.value = _profileUiState.value.copy(
+                isSaving = true,
+                error = null,
+                saved = false
+            )
+            authRepository.updateProfile(name.trim())
+                .onSuccess { profile ->
+                    authRepository.saveUserBio(bio.trim())
+                    _profileUiState.value = _profileUiState.value.copy(
+                        isSaving = false,
+                        saved = true,
+                        profile = profile
+                    )
+                }
+                .onFailure {
+                    _profileUiState.value = _profileUiState.value.copy(
+                        isSaving = false,
+                        error = it.message ?: "No se pudo guardar el perfil"
+                    )
+                }
+        }
+    }
+
+    fun clearProfileSaved() {
+        _profileUiState.value = _profileUiState.value.copy(saved = false)
     }
 }
