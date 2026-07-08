@@ -1,4 +1,6 @@
+import uuid
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from supabase import create_client, Client
@@ -40,8 +42,8 @@ async def register(
                 detail="No se pudo crear el usuario en el servicio de autenticación."
             )
         
-        user_id = auth_response.user.id
-        
+        user_id = uuid.UUID(str(auth_response.user.id))
+
         # Create profile in our database
         profile = Profile(
             id=user_id,
@@ -57,7 +59,7 @@ async def register(
         return TokenResponse(
             access_token=auth_response.session.access_token,
             refresh_token=auth_response.session.refresh_token,
-            user_id=user_id,
+            user_id=str(user_id),
             role=profile.role,
             name=profile.name
         )
@@ -89,13 +91,13 @@ async def login(
                 detail="Credenciales inválidas"
             )
         
-        user_id = auth_response.user.id
-        
+        user_id = uuid.UUID(str(auth_response.user.id))
+
         # Fetch profile
         from sqlmodel import select
         result = await db.execute(select(Profile).where(Profile.id == user_id))
         profile = result.scalar_one_or_none()
-        
+
         if not profile:
             # Create a default profile if for some reason it didn't exist
             profile = Profile(
@@ -110,7 +112,7 @@ async def login(
         return TokenResponse(
             access_token=auth_response.session.access_token,
             refresh_token=auth_response.session.refresh_token,
-            user_id=user_id,
+            user_id=str(user_id),
             role=profile.role,
             name=profile.name
         )
@@ -138,8 +140,8 @@ async def refresh_token(
                 detail="Token de actualización inválido o expirado"
             )
             
-        user_id = auth_response.user.id
-        
+        user_id = uuid.UUID(str(auth_response.user.id))
+
         # Fetch profile
         from sqlmodel import select
         result = await db.execute(select(Profile).where(Profile.id == user_id))
@@ -154,7 +156,7 @@ async def refresh_token(
         return TokenResponse(
             access_token=auth_response.session.access_token,
             refresh_token=auth_response.session.refresh_token,
-            user_id=user_id,
+            user_id=str(user_id),
             role=profile.role,
             name=profile.name
         )

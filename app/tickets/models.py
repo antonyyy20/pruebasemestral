@@ -9,7 +9,7 @@ class Ticket(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     event_id: uuid.UUID = Field(foreign_key="events.id", index=True, nullable=False)
-    user_id: str = Field(foreign_key="profiles.id", index=True, nullable=False)
+    user_id: uuid.UUID = Field(foreign_key="profiles.id", index=True, nullable=False)
     qr_signature: str = Field(nullable=False)
     status: str = Field(default="REGISTERED", nullable=False)
     

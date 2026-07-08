@@ -7,7 +7,7 @@ class Event(SQLModel, table=True):
     __tablename__ = "events"
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    organizer_id: str = Field(foreign_key="profiles.id", nullable=False)
+    organizer_id: uuid.UUID = Field(foreign_key="profiles.id", nullable=False)
     title: str = Field(index=True)
     description: str
     category: str
@@ -34,7 +34,7 @@ class StaffAssignment(SQLModel, table=True):
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     event_id: uuid.UUID = Field(foreign_key="events.id", nullable=False)
-    user_id: str = Field(foreign_key="profiles.id", nullable=False)
+    user_id: uuid.UUID = Field(foreign_key="profiles.id", nullable=False)
     assigned_at: datetime.datetime = Field(
         default_factory=datetime.datetime.utcnow,
         nullable=False

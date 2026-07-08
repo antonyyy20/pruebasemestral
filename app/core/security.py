@@ -1,4 +1,6 @@
+import uuid
 from typing import Annotated
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
@@ -37,7 +39,7 @@ async def get_current_user(
         )
     
     # Query database to get user profile
-    result = await db.execute(select(Profile).where(Profile.id == user_id))
+    result = await db.execute(select(Profile).where(Profile.id == uuid.UUID(user_id)))
     profile = result.scalar_one_or_none()
     
     if not profile:

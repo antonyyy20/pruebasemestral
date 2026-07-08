@@ -18,8 +18,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Emulador Android → localhost del host: 10.0.2.2
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/api/v1/\"")
+        // API en Render (HTTPS)
+        buildConfigField("String", "API_BASE_URL", "\"https://pruebasemestral.onrender.com/api/v1/\"")
     }
 
     buildTypes {
@@ -31,7 +31,7 @@ android {
             )
         }
         debug {
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/api/v1/\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://pruebasemestral.onrender.com/api/v1/\"")
         }
     }
 

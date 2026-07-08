@@ -148,7 +148,9 @@ async def assign_staff(
         )
     
     # Verify user being assigned exists
-    user_result = await db.execute(select(Profile).where(Profile.id == assignment.user_id))
+    user_result = await db.execute(
+        select(Profile).where(Profile.id == uuid.UUID(assignment.user_id))
+    )
     staff_profile = user_result.scalar_one_or_none()
     if not staff_profile:
         raise HTTPException(status_code=404, detail="Usuario a asignar como staff no encontrado")
@@ -158,7 +160,7 @@ async def assign_staff(
         select(StaffAssignment).where(
             and_(
                 StaffAssignment.event_id == id,
-                StaffAssignment.user_id == assignment.user_id
+                StaffAssignment.user_id == uuid.UUID(assignment.user_id),
             )
         )
     )
@@ -170,7 +172,7 @@ async def assign_staff(
         
     staff_assign = StaffAssignment(
         event_id=id,
-        user_id=assignment.user_id
+        user_id=uuid.UUID(assignment.user_id),
     )
     db.add(staff_assign)
     await db.commit()
