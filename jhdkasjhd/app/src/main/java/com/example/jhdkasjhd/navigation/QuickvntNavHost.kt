@@ -249,9 +249,9 @@ fun QuickvntNavHost(
                 val eventId = backStack.arguments?.getString("eventId").orEmpty()
                 RegisterEventScreen(
                     eventId = eventId,
-                    onSuccess = { ticketId ->
-                        navController.navigate(Routes.ticketDetail(ticketId)) {
-                            popUpTo(Routes.MARKETPLACE)
+                    onSuccess = {
+                        navController.navigate(Routes.MY_TICKETS) {
+                            popUpTo(Routes.MARKETPLACE) { inclusive = false }
                         }
                     },
                     onBack = { navController.popBackStack() }

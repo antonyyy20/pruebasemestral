@@ -24,10 +24,10 @@ object NetworkErrors {
                 }
             }
             is HttpException -> {
-                when (root.code()) {
-                    401 -> parseApiError(root) ?: "Sesión expirada. Inicia sesión de nuevo."
-                    403 -> parseApiError(root) ?: "No autorizado. Inicia sesión de nuevo."
-                    400 -> parseApiError(root) ?: "Solicitud inválida."
+                parseApiError(root) ?: when (root.code()) {
+                    401 -> "Sesión expirada. Inicia sesión de nuevo."
+                    403 -> "No autorizado. Inicia sesión de nuevo."
+                    400 -> "Solicitud inválida."
                     404 -> "Recurso no encontrado."
                     500, 502, 503, 504 -> "El servidor no está disponible. Intenta en unos segundos."
                     else -> "Error del servidor (${root.code()})."
@@ -49,3 +49,8 @@ object NetworkErrors {
         }
     }
 }
+
+fun <T> Result<T>.mapNetworkError(): Result<T> = fold(
+    onSuccess = { Result.success(it) },
+    onFailure = { Result.failure(IllegalStateException(NetworkErrors.userMessage(it))) }
+)

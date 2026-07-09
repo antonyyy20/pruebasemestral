@@ -66,12 +66,21 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private const val CREATE_EVENT_HERO_ASSET = "file:///android_asset/12085253_20944068.svg"
 private val CreateEventCoverButtonBg = Color(0xFFD6E4FF)
+
+internal fun localDateToPickerMillis(date: LocalDate): Long {
+    return date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+}
+
+internal fun pickerMillisToLocalDate(millis: Long): LocalDate {
+    return Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+}
 
 internal fun formatCreateEventDate(date: LocalDate): String {
     val formatter = DateTimeFormatter.ofPattern("EEE, d MMM", Locale.forLanguageTag("es-PA"))
@@ -503,10 +512,7 @@ internal fun CreateEventDatePickerDialog(
     onConfirm: (LocalDate) -> Unit
 ) {
     val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialDate
-            ?.atStartOfDay(ZoneId.systemDefault())
-            ?.toInstant()
-            ?.toEpochMilli()
+        initialSelectedDateMillis = initialDate?.let { localDateToPickerMillis(it) }
     )
 
     DatePickerDialog(
@@ -514,8 +520,7 @@ internal fun CreateEventDatePickerDialog(
         confirmButton = {
             TextButton(onClick = {
                 val millis = datePickerState.selectedDateMillis ?: return@TextButton
-                val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
-                onConfirm(date)
+                onConfirm(pickerMillisToLocalDate(millis))
                 onDismiss()
             }) {
                 Text("Aceptar", color = CoinbasePrimary)

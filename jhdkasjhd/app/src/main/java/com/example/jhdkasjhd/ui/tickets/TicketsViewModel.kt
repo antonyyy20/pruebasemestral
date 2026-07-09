@@ -16,7 +16,9 @@ import kotlinx.coroutines.launch
 data class TicketsUiState(
     val isLoading: Boolean = false,
     val tickets: List<TicketResponse> = emptyList(),
+    val eventsById: Map<String, EventResponse> = emptyMap(),
     val selectedTicket: TicketResponse? = null,
+    val selectedEvent: EventResponse? = null,
     val eventForRegistration: EventResponse? = null,
     val registrationSuccess: Boolean = false,
     val error: String? = null
@@ -44,7 +46,15 @@ class TicketsViewModel(
 
             ticketRepository.myTickets()
                 .onSuccess { tickets ->
-                    _uiState.value = TicketsUiState(tickets = tickets)
+                    val eventsById = mutableMapOf<String, EventResponse>()
+                    tickets.map { it.eventId }.distinct().forEach { eventId ->
+                        eventRepository.getEvent(eventId)
+                            .onSuccess { event -> eventsById[eventId] = event }
+                    }
+                    _uiState.value = TicketsUiState(
+                        tickets = tickets,
+                        eventsById = eventsById
+                    )
                 }
                 .onFailure {
                     _uiState.value = TicketsUiState(error = it.message ?: "Error al cargar boletos")
@@ -64,9 +74,28 @@ class TicketsViewModel(
                 return@launch
             }
 
+            val tickets = ticketRepository.myTickets().getOrNull().orEmpty()
+
             ticketRepository.getTicket(ticketId)
                 .onSuccess { ticket ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, selectedTicket = ticket)
+                    eventRepository.getEvent(ticket.eventId)
+                        .onSuccess { event ->
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                tickets = tickets,
+                                selectedTicket = ticket,
+                                selectedEvent = event
+                            )
+                        }
+                        .onFailure {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                tickets = tickets,
+                                selectedTicket = ticket,
+                                selectedEvent = null,
+                                error = it.message ?: "Error al cargar evento"
+                            )
+                        }
                 }
                 .onFailure {
                     _uiState.value = _uiState.value.copy(
@@ -110,6 +139,7 @@ class TicketsViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedTicket = ticket,
+                        selectedEvent = _uiState.value.eventForRegistration,
                         registrationSuccess = true
                     )
                 }
@@ -120,5 +150,9 @@ class TicketsViewModel(
                     )
                 }
         }
+    }
+
+    fun clearRegistrationSuccess() {
+        _uiState.value = _uiState.value.copy(registrationSuccess = false)
     }
 }

@@ -183,11 +183,12 @@ fun CreateEventScreen(
 
     val parsedCapacity = capacity.trim().toIntOrNull()
     val parsedSchema = parseCustomFormSchema(customFormSchema)
+    val hasValidBanner = bannerUrl.isBlank() || isValidHttpUrl(bannerUrl)
     val hasValidDates = startDate != null && startTime != null && endDate != null && endTime != null
     val hasValidRange = if (hasValidDates) {
         val start = ZonedDateTime.of(startDate!!, startTime!!, ZoneId.systemDefault())
         val end = ZonedDateTime.of(endDate!!, endTime!!, ZoneId.systemDefault())
-        end.isAfter(start)
+        !end.isBefore(start)
     } else {
         false
     }
@@ -199,16 +200,13 @@ fun CreateEventScreen(
         hasValidDates &&
         hasValidRange &&
         parsedCapacity != null && parsedCapacity > 0 &&
-        bannerUrl.isNotBlank() &&
-        isValidHttpUrl(bannerUrl) &&
-        customFormSchema.isNotBlank() &&
+        hasValidBanner &&
         parsedSchema.isSuccess
 
     fun submitEvent() {
         showValidationErrors = true
         if (!isFormValid || uiState.isLoading) return
 
-        val schema = parsedSchema.getOrThrow()
         viewModel.createEvent(
             EventCreateRequest(
                 title = eventTitle.trim(),
@@ -218,8 +216,8 @@ fun CreateEventScreen(
                 dateStart = toIsoDateTime(startDate!!, startTime!!),
                 dateEnd = toIsoDateTime(endDate!!, endTime!!),
                 capacity = parsedCapacity!!,
-                bannerUrl = bannerUrl.trim(),
-                customFormSchema = schema
+                bannerUrl = bannerUrl.trim().takeIf { it.isNotBlank() },
+                customFormSchema = parsedSchema.getOrDefault(emptyMap())
             )
         )
     }
@@ -247,7 +245,7 @@ fun CreateEventScreen(
             CreateEventHeroSection(
                 bannerUrl = bannerUrl,
                 onBannerClick = { showBannerUrlDialog = true },
-                showError = showValidationErrors && (bannerUrl.isBlank() || !isValidHttpUrl(bannerUrl))
+                showError = showValidationErrors && bannerUrl.isNotBlank() && !isValidHttpUrl(bannerUrl)
             )
 
             Column(
@@ -281,7 +279,7 @@ fun CreateEventScreen(
                 )
 
                 if (showValidationErrors && hasValidDates && !hasValidRange) {
-                    CreateEventFieldError("La fecha de fin debe ser posterior al inicio")
+                    CreateEventFieldError("La fecha de fin debe ser igual o posterior al inicio")
                 }
 
                 CreateEventFilledField(
@@ -326,14 +324,11 @@ fun CreateEventScreen(
                 CreateEventFilledField(
                     value = customFormSchema,
                     onValueChange = { customFormSchema = it },
-                    placeholder = "Esquema del formulario (JSON)",
+                    placeholder = "Formulario JSON (opcional). Ej: {\"fields\":[]}",
                     singleLine = false,
                     minHeight = 120.dp,
-                    showError = showValidationErrors && (customFormSchema.isBlank() || parsedSchema.isFailure),
-                    errorMessage = when {
-                        customFormSchema.isBlank() -> "El esquema del formulario es obligatorio"
-                        else -> parsedSchema.exceptionOrNull()?.message ?: "JSON inválido"
-                    }
+                    showError = showValidationErrors && parsedSchema.isFailure,
+                    errorMessage = parsedSchema.exceptionOrNull()?.message ?: "JSON inválido"
                 )
 
                 uiState.error?.let { message ->
@@ -354,7 +349,12 @@ fun CreateEventScreen(
         CreateEventDatePickerDialog(
             initialDate = startDate,
             onDismiss = { showStartDatePicker = false },
-            onConfirm = { startDate = it }
+            onConfirm = { selected ->
+                startDate = selected
+                if (endDate == null || endDate!!.isBefore(selected)) {
+                    endDate = selected
+                }
+            }
         )
     }
 
@@ -362,7 +362,18 @@ fun CreateEventScreen(
         CreateEventTimePickerDialog(
             initialTime = startTime,
             onDismiss = { showStartTimePicker = false },
-            onConfirm = { startTime = it }
+            onConfirm = { selected ->
+                startTime = selected
+                if (endTime == null) {
+                    endTime = selected.plusHours(2).let { adjusted ->
+                        if (adjusted.toSecondOfDay() < selected.toSecondOfDay()) {
+                            LocalTime.of(23, 59)
+                        } else {
+                            adjusted
+                        }
+                    }
+                }
+            }
         )
     }
 

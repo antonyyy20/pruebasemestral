@@ -11,8 +11,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
@@ -110,6 +118,66 @@ fun QuickvntScaffold(
         bottomBar = bottomBar
     ) { padding ->
         content(padding)
+    }
+}
+
+data class CoinbaseNavItem(
+    val route: String,
+    val label: String,
+    val icon: ImageVector,
+    val isSelected: (currentRoute: String?) -> Boolean
+)
+
+@Composable
+fun CoinbaseBottomNavigationBar(
+    items: List<CoinbaseNavItem>,
+    currentRoute: String?,
+    onItemClick: (CoinbaseNavItem) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(CoinbaseCanvas)
+    ) {
+        HorizontalDivider(
+            thickness = 1.dp,
+            color = CoinbaseHairline
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .height(56.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEach { item ->
+                val selected = item.isSelected(currentRoute)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onItemClick(item) }
+                        )
+                        .semantics {
+                            contentDescription = item.label
+                            role = Role.Tab
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = null,
+                        tint = if (selected) CoinbasePrimary else CoinbaseInk,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+        }
     }
 }
 

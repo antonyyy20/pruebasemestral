@@ -31,7 +31,6 @@ import com.example.jhdkasjhd.ui.theme.CoinbaseCanvas
 import com.example.jhdkasjhd.ui.theme.CoinbaseInk
 import com.example.jhdkasjhd.ui.theme.CoinbaseMuted
 import com.example.jhdkasjhd.ui.theme.CoinbaseSpacing
-import com.example.jhdkasjhd.ui.theme.CoinbaseSurfaceSoft
 
 @Composable
 fun MarketplaceScreen(
@@ -212,7 +211,7 @@ fun EventDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CoinbaseSurfaceSoft)
+            .background(CoinbaseCanvas)
     ) {
         when {
             uiState.isLoading && event == null -> LoadingBox(Modifier.fillMaxSize())
@@ -225,13 +224,7 @@ fun EventDetailScreen(
             )
             event != null -> Column(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(CoinbaseSurfaceSoft),
-                    contentPadding = PaddingValues(
-                        top = CoinbaseSpacing.base,
-                        bottom = CoinbaseSpacing.base
-                    )
+                    modifier = Modifier.weight(1f)
                 ) {
                     item {
                         EventDetailContent(

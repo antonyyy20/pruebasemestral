@@ -1,5 +1,6 @@
 package com.example.jhdkasjhd.data.repository
 
+import com.example.jhdkasjhd.core.network.mapNetworkError
 import com.example.jhdkasjhd.core.network.QuickvntApi
 import com.example.jhdkasjhd.data.dto.EventCreateRequest
 import com.example.jhdkasjhd.data.dto.EventResponse
@@ -15,9 +16,11 @@ class EventRepository(
     }
 
     suspend fun listAllOrganizerEvents(organizerId: String): Result<List<EventResponse>> = runCatching {
+        api.listMyEvents(skip = 0, limit = 100)
+    }.recoverCatching {
         api.listEvents(statusFilter = "", skip = 0, limit = 100)
-            .filter { it.organizerId == organizerId }
-    }
+            .filter { event -> event.organizerId == organizerId }
+    }.mapNetworkError()
 
     suspend fun getEvent(id: String): Result<EventResponse> = runCatching {
         api.getEvent(id)
@@ -25,7 +28,7 @@ class EventRepository(
 
     suspend fun createEvent(request: EventCreateRequest): Result<EventResponse> = runCatching {
         api.createEvent(request)
-    }
+    }.mapNetworkError()
 
     suspend fun updateEvent(id: String, request: EventUpdateRequest): Result<EventResponse> = runCatching {
         api.updateEvent(id, request)

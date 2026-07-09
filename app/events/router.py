@@ -1,8 +1,9 @@
-from typing import Annotated, Any
+from typing import Annotated
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, and_, or_
+from sqlmodel import select, and_
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
@@ -14,6 +15,26 @@ from app.events.schemas import (
 )
 
 router = APIRouter(prefix="/events", tags=["Events"])
+
+
+@router.get("/mine", response_model=list[EventResponse])
+async def list_my_events(
+    current_user: Annotated[Profile, Depends(require_role(["ORGANIZER"]))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+):
+    """List events created by the authenticated organizer."""
+    query = (
+        select(Event)
+        .where(Event.organizer_id == current_user.id)
+        .order_by(Event.date_start.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    return result.scalars().all()
+
 
 @router.get("", response_model=list[EventResponse])
 async def list_events(
@@ -60,23 +81,54 @@ async def create_event(
     db: Annotated[AsyncSession, Depends(get_db)]
 ):
     """Create a new event. Restricted to ORGANIZER role."""
+    if event_data.date_end < event_data.date_start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La fecha de fin debe ser igual o posterior a la de inicio",
+        )
+
     event = Event(
         organizer_id=current_user.id,
-        title=event_data.title,
-        description=event_data.description,
-        category=event_data.category,
-        location=event_data.location,
+        title=event_data.title.strip(),
+        description=event_data.description.strip(),
+        category=event_data.category.strip(),
+        location=event_data.location.strip(),
         date_start=event_data.date_start,
         date_end=event_data.date_end,
         capacity=event_data.capacity,
         banner_url=event_data.banner_url,
-        custom_form_schema=event_data.custom_form_schema,
-        status="DRAFT" # Starts as draft
+        custom_form_schema=event_data.custom_form_schema or {},
+        status="DRAFT",
     )
-    db.add(event)
-    await db.commit()
-    await db.refresh(event)
-    return event
+
+    try:
+        db.add(event)
+        await db.commit()
+        await db.refresh(event)
+        return event
+    except HTTPException:
+        await db.rollback()
+        raise
+    except IntegrityError as exc:
+        await db.rollback()
+        detail = str(getattr(exc, "orig", exc))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No se pudo crear el evento: {detail}",
+        ) from exc
+    except SQLAlchemyError as exc:
+        await db.rollback()
+        detail = str(getattr(exc, "orig", exc))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al guardar el evento: {detail}",
+        ) from exc
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error inesperado al crear el evento: {str(exc)}",
+        ) from exc
 
 @router.put("/{id}", response_model=EventResponse)
 async def update_event(

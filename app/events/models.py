@@ -1,7 +1,10 @@
 import datetime
 import uuid
 from typing import Any
-from sqlmodel import SQLModel, Field, JSON, Column
+
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import SQLModel, Field, Column
+
 
 class Event(SQLModel, table=True):
     __tablename__ = "events"
@@ -18,14 +21,13 @@ class Event(SQLModel, table=True):
     banner_url: str | None = None
     status: str = Field(default="DRAFT", description="DRAFT, PUBLISHED, CLOSED, CANCELLED")
     
-    # Use JSON column to store dynamic schema for custom registration forms
     custom_form_schema: dict[str, Any] = Field(
         default_factory=dict,
-        sa_column=Column(JSON, nullable=False, server_default="{}")
+        sa_column=Column(JSONB, nullable=False, server_default="{}")
     )
     
     created_at: datetime.datetime = Field(
-        default_factory=datetime.datetime.utcnow,
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
         nullable=False
     )
 

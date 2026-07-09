@@ -114,6 +114,28 @@ internal fun formatEventDayOfWeek(isoDate: String?): String {
     }
 }
 
+internal fun formatEventFullDate(isoDate: String?): String {
+    if (isoDate.isNullOrBlank()) return "Fecha por confirmar"
+    return try {
+        val zoned = Instant.parse(isoDate).atZone(ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", Locale.forLanguageTag("es-PA"))
+        zoned.format(formatter).replaceFirstChar { it.titlecase(Locale.getDefault()) }
+    } catch (_: Exception) {
+        isoDate.take(10)
+    }
+}
+
+internal fun formatEventTimeRangeDetailed(dateStart: String?, dateEnd: String?): String {
+    val start = formatEventDetailTimeOnly(dateStart)
+    val end = formatEventDetailTimeOnly(dateEnd)
+    return when {
+        start.isBlank() && end.isBlank() -> "Horario por confirmar"
+        end.isBlank() -> start
+        start.isBlank() -> end
+        else -> "$start – $end"
+    }
+}
+
 internal fun formatEventTimeRange(dateStart: String?, dateEnd: String?): String {
     val start = formatEventDetailTimeOnly(dateStart)
     val end = formatEventDetailTimeOnly(dateEnd)

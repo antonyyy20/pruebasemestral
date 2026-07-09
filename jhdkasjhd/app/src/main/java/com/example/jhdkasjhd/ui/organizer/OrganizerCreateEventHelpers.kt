@@ -5,9 +5,10 @@ import org.json.JSONObject
 
 internal fun parseCustomFormSchema(raw: String): Result<Map<String, Any?>> = runCatching {
     val trimmed = raw.trim()
-    require(trimmed.isNotEmpty()) { "El esquema del formulario es obligatorio" }
+    if (trimmed.isEmpty() || trimmed == "{}") {
+        return@runCatching emptyMap()
+    }
     val json = JSONObject(trimmed)
-    require(json.length() > 0) { "El esquema del formulario no puede estar vacío" }
     jsonObjectToMap(json)
 }
 

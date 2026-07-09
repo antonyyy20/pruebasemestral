@@ -41,6 +41,12 @@ interface QuickvntApi {
     @PUT("users/me")
     suspend fun updateProfile(@Body body: ProfileUpdateRequest): ProfileResponse
 
+    @GET("events/mine")
+    suspend fun listMyEvents(
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 50
+    ): List<EventResponse>
+
     @GET("events")
     suspend fun listEvents(
         @Query("category") category: String? = null,

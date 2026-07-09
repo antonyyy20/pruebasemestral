@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -23,11 +24,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Groups
@@ -36,13 +35,11 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -66,18 +63,16 @@ import com.example.jhdkasjhd.ui.theme.CoinbaseCanvas
 import com.example.jhdkasjhd.ui.theme.CoinbaseHairline
 import com.example.jhdkasjhd.ui.theme.CoinbaseInk
 import com.example.jhdkasjhd.ui.theme.CoinbaseMuted
+import com.example.jhdkasjhd.ui.theme.CoinbaseMutedSoft
 import com.example.jhdkasjhd.ui.theme.CoinbaseOnPrimary
 import com.example.jhdkasjhd.ui.theme.CoinbasePrimary
 import com.example.jhdkasjhd.ui.theme.CoinbaseRadiusLg
 import com.example.jhdkasjhd.ui.theme.CoinbaseRadiusMd
 import com.example.jhdkasjhd.ui.theme.CoinbaseRadiusPill
-import com.example.jhdkasjhd.ui.theme.CoinbaseRadiusXl
 import com.example.jhdkasjhd.ui.theme.CoinbaseSemanticUp
 import com.example.jhdkasjhd.ui.theme.CoinbaseSpacing
 import com.example.jhdkasjhd.ui.theme.CoinbaseSurfaceSoft
 import com.example.jhdkasjhd.ui.theme.CoinbaseSurfaceStrong
-
-private val EventDetailBackground = CoinbaseSurfaceSoft
 
 @Composable
 internal fun EventDetailContent(
@@ -93,12 +88,10 @@ internal fun EventDetailContent(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = CoinbaseSpacing.base),
-        verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base)
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        EventDetailHeroCard(
+        EventDetailBanner(
             event = event,
             onBack = onBack,
             onShare = onShare,
@@ -106,114 +99,82 @@ internal fun EventDetailContent(
             onToggleSave = onToggleSave
         )
 
-        EventDetailOrganizerRow(category = event.category)
-
-        Text(
-            text = event.title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = CoinbaseInk,
-            fontWeight = FontWeight.Bold
-        )
-
-        if (isOrganizer) {
-            EventDetailOrganizerActionRow(
-                onAnalyticsClick = onAnalyticsClick,
-                onScanClick = onScanClick
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CoinbaseCanvas)
+                .padding(horizontal = CoinbaseSpacing.base)
+                .padding(top = CoinbaseSpacing.lg, bottom = CoinbaseSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.lg)
+        ) {
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = CoinbaseInk,
+                fontWeight = FontWeight.Bold
             )
-        } else {
-            EventDetailAttendeeActionRow(
-                onRegisterClick = onRegisterClick,
-                onShare = onShare,
-                enabled = event.status == "PUBLISHED"
-            )
-        }
 
-        EventDetailInfoCard(
-            icon = Icons.Default.AccessTime,
-            iconBackground = CoinbasePrimary.copy(alpha = 0.12f),
-            iconTint = CoinbasePrimary,
-            title = formatEventDayOfWeek(event.dateStart),
-            subtitle = formatEventTimeRange(event.dateStart, event.dateEnd),
-            trailing = {
-                EventDetailChip(
-                    text = "Gratis",
-                    background = CoinbaseSemanticUp.copy(alpha = 0.12f),
-                    contentColor = CoinbaseSemanticUp
+            Column(verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base)) {
+                EventDetailInfoRow(
+                    icon = Icons.Default.AccessTime,
+                    primary = formatEventFullDate(event.dateStart),
+                    secondary = formatEventTimeRangeDetailed(event.dateStart, event.dateEnd),
+                    tertiary = "Horario mostrado en tu zona local"
+                )
+                EventDetailInfoRow(
+                    icon = Icons.Default.LocationOn,
+                    primary = event.location.ifBlank { "Ubicación por confirmar" },
+                    secondary = event.category.ifBlank { "Panamá" }
+                )
+                EventDetailInfoRow(
+                    icon = Icons.Default.Person,
+                    primary = "Organizado por Quickvnt",
+                    secondary = "Categoría ${event.category.ifBlank { "general" }}"
                 )
             }
-        )
 
-        EventDetailInfoCard(
-            icon = Icons.Default.LocationOn,
-            iconBackground = CoinbaseAccentYellow.copy(alpha = 0.18f),
-            iconTint = CoinbaseAccentYellow,
-            title = event.location.ifBlank { "Ubicación por confirmar" },
-            subtitle = "Regístrate para ver detalles completos del lugar",
-            footer = { EventDetailLocationPreview(location = event.location) }
-        )
+            EventDetailLocationMap(location = event.location)
 
-        EventDetailInfoCard(
-            icon = Icons.Default.Category,
-            iconBackground = CoinbasePrimary.copy(alpha = 0.12f),
-            iconTint = CoinbasePrimary,
-            title = event.category.ifBlank { "General" },
-            subtitle = "Categoría del evento"
-        )
+            EventDetailAttendeesSection(capacity = event.capacity)
 
-        EventDetailInfoCard(
-            icon = Icons.Default.Groups,
-            iconBackground = CoinbasePrimary.copy(alpha = 0.12f),
-            iconTint = CoinbasePrimary,
-            title = "${event.capacity} cupos disponibles",
-            subtitle = "Capacidad máxima del evento",
-            trailing = {
-                EventDetailChip(
-                    text = StatusLabels.eventStatus(event.status),
-                    background = CoinbaseSurfaceStrong,
-                    contentColor = CoinbaseInk
+            HorizontalDivider(color = CoinbaseHairline)
+
+            EventDetailDescriptionSection(description = event.description)
+
+            EventDetailHighlightsRow(event = event)
+
+            if (hasCustomForm(event) || isEndingSoon(event.dateStart)) {
+                Column(verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)) {
+                    if (hasCustomForm(event)) {
+                        EventDetailNoticeCard(
+                            icon = Icons.Default.Description,
+                            title = "Formulario de registro",
+                            body = "Completa un formulario personalizado al inscribirte."
+                        )
+                    }
+                    if (isEndingSoon(event.dateStart)) {
+                        EventDetailNoticeCard(
+                            icon = Icons.Default.Info,
+                            title = "Cupos limitados",
+                            body = "El evento es pronto. Reserva tu lugar cuanto antes."
+                        )
+                    }
+                }
+            }
+
+            if (isOrganizer) {
+                HorizontalDivider(color = CoinbaseHairline)
+                EventDetailOrganizerPanel(
+                    onAnalyticsClick = onAnalyticsClick,
+                    onScanClick = onScanClick
                 )
             }
-        )
-
-        EventDetailOverviewCard(description = event.description)
-
-        if (hasCustomForm(event)) {
-            EventDetailInfoCard(
-                icon = Icons.Default.Description,
-                iconBackground = CoinbasePrimary.copy(alpha = 0.12f),
-                iconTint = CoinbasePrimary,
-                title = "Formulario de registro",
-                subtitle = "Deberás completar un formulario personalizado al inscribirte."
-            )
         }
-
-        if (isEndingSoon(event.dateStart)) {
-            EventDetailInfoCard(
-                icon = Icons.Default.Info,
-                iconBackground = CoinbaseAccentYellow.copy(alpha = 0.18f),
-                iconTint = CoinbaseAccentYellow,
-                title = "Cupos limitados",
-                subtitle = "El evento es pronto. Asegura tu lugar antes de que se agoten."
-            )
-        }
-
-        if (isOrganizer) {
-            EventDetailInfoCard(
-                icon = Icons.Default.Analytics,
-                iconBackground = CoinbasePrimary.copy(alpha = 0.12f),
-                iconTint = CoinbasePrimary,
-                title = "Panel del organizador",
-                subtitle = "Consulta analíticas o escanea QR para validar ingresos.",
-                modifier = Modifier.clickable(onClick = onAnalyticsClick)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(CoinbaseSpacing.sm))
     }
 }
 
 @Composable
-private fun EventDetailHeroCard(
+private fun EventDetailBanner(
     event: EventResponse,
     onBack: () -> Unit,
     onShare: () -> Unit,
@@ -223,8 +184,7 @@ private fun EventDetailHeroCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1.05f)
-            .clip(CoinbaseRadiusXl)
+            .aspectRatio(1.2f)
     ) {
         EventImage(
             bannerUrl = event.bannerUrl,
@@ -234,365 +194,180 @@ private fun EventDetailHeroCard(
 
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = 0.55f),
-                            Color.Black.copy(alpha = 0.15f),
-                            Color.Black.copy(alpha = 0.65f)
-                        )
+                        colors = listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent)
                     )
                 )
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
                 .statusBarsPadding()
-                .padding(CoinbaseSpacing.base),
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = CoinbaseSpacing.sm, vertical = CoinbaseSpacing.sm)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                EventDetailIconCircle(onClick = onBack) {
+                EventDetailFloatingButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Atrás",
                         tint = CoinbaseInk,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.xs)) {
-                    EventDetailIconCircle(onClick = onShare) {
+                    EventDetailFloatingButton(onClick = onShare) {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = "Compartir",
                             tint = CoinbaseInk,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                    EventDetailIconCircle(onClick = onToggleSave) {
+                    EventDetailFloatingButton(onClick = onToggleSave) {
                         Icon(
                             imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = if (isSaved) "Quitar de guardados" else "Guardar",
                             tint = if (isSaved) CoinbasePrimary else CoinbaseInk,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
-
-            Column(verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.xs)) {
-                EventDetailChip(
-                    text = event.category.ifBlank { "Evento" },
-                    background = CoinbaseCanvas.copy(alpha = 0.92f),
-                    contentColor = CoinbaseInk
-                )
-                Text(
-                    text = event.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = CoinbaseOnPrimary,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = CoinbaseOnPrimary.copy(alpha = 0.9f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = event.location.ifBlank { "Panamá" },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CoinbaseOnPrimary.copy(alpha = 0.92f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = null,
-                        tint = CoinbaseOnPrimary.copy(alpha = 0.9f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = formatEventDetailDateTime(event.dateStart),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CoinbaseOnPrimary.copy(alpha = 0.92f)
-                    )
-                }
-            }
         }
+
+        EventDetailChip(
+            text = event.category.ifBlank { "Evento" },
+            background = CoinbaseCanvas.copy(alpha = 0.94f),
+            contentColor = CoinbaseInk,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(CoinbaseSpacing.base)
+        )
     }
 }
 
 @Composable
-private fun EventDetailOrganizerRow(category: String) {
+private fun EventDetailInfoRow(
+    icon: ImageVector,
+    primary: String,
+    secondary: String,
+    tertiary: String? = null
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm),
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base),
+        verticalAlignment = Alignment.Top
     ) {
-        Box(
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = CoinbaseMuted,
             modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(CoinbasePrimary.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
+                .padding(top = 2.dp)
+                .size(22.dp)
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Verified,
-                contentDescription = null,
-                tint = CoinbasePrimary,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Quickvnt",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = CoinbaseInk,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = CoinbaseMuted,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
             Text(
-                text = category.ifBlank { "Organizador verificado" },
-                style = MaterialTheme.typography.bodySmall,
+                text = primary,
+                style = MaterialTheme.typography.titleMedium,
+                color = CoinbaseInk,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = secondary,
+                style = MaterialTheme.typography.bodyMedium,
                 color = CoinbaseMuted
             )
+            if (!tertiary.isNullOrBlank()) {
+                Text(
+                    text = tertiary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CoinbaseMutedSoft
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun EventDetailAttendeeActionRow(
-    onRegisterClick: () -> Unit,
-    onShare: () -> Unit,
-    enabled: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
-    ) {
-        Button(
-            onClick = onRegisterClick,
-            enabled = enabled,
-            modifier = Modifier.weight(1f),
-            shape = CoinbaseRadiusPill,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = CoinbasePrimary,
-                contentColor = CoinbaseOnPrimary,
-                disabledContainerColor = CoinbaseHairline,
-                disabledContentColor = CoinbaseMuted
-            ),
-            contentPadding = PaddingValues(vertical = 14.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ConfirmationNumber,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(CoinbaseSpacing.xs))
-            Text(text = "Registrarme", style = CoinbaseButtonTextStyle)
-        }
-        OutlinedButton(
-            onClick = onShare,
-            modifier = Modifier.weight(1f),
-            shape = CoinbaseRadiusPill,
-            border = androidx.compose.foundation.BorderStroke(1.dp, CoinbaseHairline),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = CoinbaseInk),
-            contentPadding = PaddingValues(vertical = 14.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Share,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(CoinbaseSpacing.xs))
-            Text(text = "Compartir", style = CoinbaseButtonTextStyle)
-        }
-    }
-}
-
-@Composable
-private fun EventDetailOrganizerActionRow(
-    onAnalyticsClick: () -> Unit,
-    onScanClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
-    ) {
-        Button(
-            onClick = onAnalyticsClick,
-            modifier = Modifier.weight(1f),
-            shape = CoinbaseRadiusPill,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = CoinbasePrimary,
-                contentColor = CoinbaseOnPrimary
-            ),
-            contentPadding = PaddingValues(vertical = 14.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Analytics,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(CoinbaseSpacing.xs))
-            Text(text = "Analíticas", style = CoinbaseButtonTextStyle)
-        }
-        OutlinedButton(
-            onClick = onScanClick,
-            modifier = Modifier.weight(1f),
-            shape = CoinbaseRadiusPill,
-            border = androidx.compose.foundation.BorderStroke(1.dp, CoinbaseHairline),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = CoinbaseInk),
-            contentPadding = PaddingValues(vertical = 14.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.QrCodeScanner,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(CoinbaseSpacing.xs))
-            Text(text = "Check-in", style = CoinbaseButtonTextStyle)
-        }
-    }
-}
-
-@Composable
-private fun EventDetailInfoCard(
-    icon: ImageVector,
-    iconBackground: Color,
-    iconTint: Color,
-    title: String,
-    subtitle: String? = null,
-    modifier: Modifier = Modifier,
-    trailing: @Composable (() -> Unit)? = null,
-    footer: @Composable (() -> Unit)? = null
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(CoinbaseRadiusLg)
-            .border(1.dp, CoinbaseHairline, CoinbaseRadiusLg)
-            .background(CoinbaseCanvas)
-            .padding(CoinbaseSpacing.base),
-        verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
-    ) {
+private fun EventDetailAttendeesSection(capacity: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
         ) {
+            Icon(
+                imageVector = Icons.Default.Groups,
+                contentDescription = null,
+                tint = CoinbaseMuted,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = "Hasta $capacity personas pueden asistir",
+                style = MaterialTheme.typography.titleMedium,
+                color = CoinbaseInk,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        EventDetailAvatarRow(count = minOf(capacity, 8))
+    }
+}
+
+@Composable
+private fun EventDetailAvatarRow(count: Int) {
+    if (count <= 0) return
+    val palette = listOf(
+        CoinbasePrimary,
+        CoinbaseAccentYellow,
+        CoinbaseSemanticUp,
+        Color(0xFF9B59FF),
+        Color(0xFFE86A17)
+    )
+    Row(
+        modifier = Modifier.padding(start = 34.dp),
+        horizontalArrangement = Arrangement.spacedBy(0.dp)
+    ) {
+        repeat(count) { index ->
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(CoinbaseRadiusMd)
-                    .background(iconBackground),
+                    .offset(x = (-10 * index).dp)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(palette[index % palette.size])
+                    .border(2.dp, CoinbaseCanvas, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CoinbaseInk,
-                    fontWeight = FontWeight.SemiBold
+                    text = ('A' + (index % 26)).toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = CoinbaseOnPrimary,
+                    fontWeight = FontWeight.Bold
                 )
-                if (!subtitle.isNullOrBlank()) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CoinbaseMuted
-                    )
-                }
             }
-            trailing?.invoke()
         }
-        footer?.invoke()
     }
 }
 
 @Composable
-private fun EventDetailOverviewCard(description: String) {
+private fun EventDetailDescriptionSection(description: String) {
     var expanded by remember { mutableStateOf(false) }
     val text = description.ifBlank { "Sin descripción disponible." }
-    val canExpand = text.length > 140
+    val canExpand = text.length > 180
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(CoinbaseRadiusLg)
-            .border(1.dp, CoinbaseHairline, CoinbaseRadiusLg)
-            .background(CoinbaseCanvas)
-            .padding(CoinbaseSpacing.base),
-        verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base),
-            verticalAlignment = Alignment.Top
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CoinbaseRadiusMd)
-                    .background(CoinbasePrimary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Event,
-                    contentDescription = null,
-                    tint = CoinbasePrimary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Acerca del evento",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CoinbaseInk,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CoinbaseMuted,
-                    maxLines = if (expanded) Int.MAX_VALUE else 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = CoinbaseInk,
+            maxLines = if (expanded) Int.MAX_VALUE else 5,
+            overflow = TextOverflow.Ellipsis
+        )
         if (canExpand) {
             Row(
                 modifier = Modifier.clickable { expanded = !expanded },
@@ -616,41 +391,157 @@ private fun EventDetailOverviewCard(description: String) {
 }
 
 @Composable
-private fun EventDetailLocationPreview(location: String) {
-    Box(
+private fun EventDetailHighlightsRow(event: EventResponse) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
+    ) {
+        EventDetailMiniCard(
+            icon = Icons.Default.Category,
+            label = event.category.ifBlank { "General" },
+            modifier = Modifier.weight(1f)
+        )
+        EventDetailMiniCard(
+            icon = Icons.Default.ConfirmationNumber,
+            label = StatusLabels.eventStatus(event.status),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun EventDetailMiniCard(
+    icon: ImageVector,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(CoinbaseRadiusMd)
+            .background(CoinbaseSurfaceSoft)
+            .padding(CoinbaseSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.xs)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = CoinbasePrimary,
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = CoinbaseInk,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun EventDetailNoticeCard(
+    icon: ImageVector,
+    title: String,
+    body: String
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp)
-            .clip(CoinbaseRadiusMd)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        CoinbasePrimary.copy(alpha = 0.15f),
-                        CoinbaseSurfaceStrong
-                    )
-                )
-            ),
-        contentAlignment = Alignment.Center
+            .clip(CoinbaseRadiusLg)
+            .background(CoinbaseSurfaceSoft)
+            .padding(CoinbaseSpacing.base),
+        horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base),
+        verticalAlignment = Alignment.Top
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.xs)
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CoinbaseRadiusMd)
+                .background(CoinbasePrimary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.LocationOn,
+                imageVector = icon,
                 contentDescription = null,
                 tint = CoinbasePrimary,
-                modifier = Modifier.size(28.dp)
-            )
-            Text(
-                text = location.ifBlank { "Panamá" },
-                style = MaterialTheme.typography.labelLarge,
-                color = CoinbaseInk,
-                fontWeight = FontWeight.Medium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.size(20.dp)
             )
         }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = CoinbaseInk,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = CoinbaseMuted
+            )
+        }
+    }
+}
+
+@Composable
+private fun EventDetailOrganizerPanel(
+    onAnalyticsClick: () -> Unit,
+    onScanClick: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)) {
+        Text(
+            text = "Panel del organizador",
+            style = MaterialTheme.typography.titleMedium,
+            color = CoinbaseInk,
+            fontWeight = FontWeight.Bold
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)) {
+            EventDetailOrganizerTool(
+                icon = Icons.Default.Analytics,
+                label = "Analíticas",
+                onClick = onAnalyticsClick,
+                modifier = Modifier.weight(1f)
+            )
+            EventDetailOrganizerTool(
+                icon = Icons.Default.QrCodeScanner,
+                label = "Check-in QR",
+                onClick = onScanClick,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun EventDetailOrganizerTool(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(CoinbaseRadiusLg)
+            .border(1.dp, CoinbaseHairline, CoinbaseRadiusLg)
+            .background(CoinbaseCanvas)
+            .clickable(onClick = onClick)
+            .padding(CoinbaseSpacing.base),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.xs)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = CoinbasePrimary,
+            modifier = Modifier.size(24.dp)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = CoinbaseInk,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -658,11 +549,12 @@ private fun EventDetailLocationPreview(location: String) {
 private fun EventDetailChip(
     text: String,
     background: Color,
-    contentColor: Color
+    contentColor: Color,
+    modifier: Modifier = Modifier
 ) {
     Text(
         text = text,
-        modifier = Modifier
+        modifier = modifier
             .clip(CoinbaseRadiusPill)
             .background(background)
             .padding(horizontal = 10.dp, vertical = 4.dp),
@@ -673,7 +565,7 @@ private fun EventDetailChip(
 }
 
 @Composable
-private fun EventDetailIconCircle(
+private fun EventDetailFloatingButton(
     onClick: () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -681,7 +573,7 @@ private fun EventDetailIconCircle(
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(CoinbaseCanvas.copy(alpha = 0.92f))
+            .background(CoinbaseCanvas.copy(alpha = 0.94f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -705,54 +597,31 @@ internal fun EventDetailAttendeeBottomBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CoinbaseRadiusMd)
-                    .background(CoinbasePrimary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ConfirmationNumber,
-                    contentDescription = null,
-                    tint = CoinbasePrimary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = "Desde $0",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CoinbaseInk,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = formatEventDetailDateTime(event.dateStart),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CoinbaseMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+        Text(
+            text = "GRATIS",
+            style = MaterialTheme.typography.titleLarge,
+            color = CoinbaseInk,
+            fontWeight = FontWeight.Bold
+        )
         Button(
             onClick = onRegisterClick,
             enabled = enabled,
-            shape = CoinbaseRadiusPill,
+            shape = CoinbaseRadiusMd,
             colors = ButtonDefaults.buttonColors(
                 containerColor = CoinbasePrimary,
                 contentColor = CoinbaseOnPrimary,
                 disabledContainerColor = CoinbaseHairline,
                 disabledContentColor = CoinbaseMuted
             ),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
         ) {
-            Text(text = "Obtener boletos", style = CoinbaseButtonTextStyle)
+            Icon(
+                imageVector = Icons.Default.ConfirmationNumber,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(CoinbaseSpacing.xs))
+            Text(text = "Registrarse", style = CoinbaseButtonTextStyle)
         }
     }
 }
@@ -772,47 +641,27 @@ internal fun EventDetailOrganizerBottomBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CoinbaseRadiusMd)
-                    .background(CoinbasePrimary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    tint = CoinbasePrimary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = StatusLabels.eventStatus(event.status),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CoinbaseInk,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${event.capacity} cupos",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CoinbaseMuted
-                )
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = StatusLabels.eventStatus(event.status).uppercase(),
+                style = MaterialTheme.typography.titleMedium,
+                color = CoinbaseInk,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "${event.capacity} cupos",
+                style = MaterialTheme.typography.bodySmall,
+                color = CoinbaseMuted
+            )
         }
         Button(
             onClick = onAnalyticsClick,
-            shape = CoinbaseRadiusPill,
+            shape = CoinbaseRadiusMd,
             colors = ButtonDefaults.buttonColors(
                 containerColor = CoinbasePrimary,
                 contentColor = CoinbaseOnPrimary
             ),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 14.dp)
         ) {
             Text(text = "Analíticas", style = CoinbaseButtonTextStyle)
         }
