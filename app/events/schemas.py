@@ -3,8 +3,6 @@ import uuid
 from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.datetime_utils import to_db_datetime
-
 class EventBase(BaseModel):
     title: str
     description: str
@@ -15,11 +13,6 @@ class EventBase(BaseModel):
     capacity: int = Field(gt=0)
     banner_url: str | None = None
     custom_form_schema: dict[str, Any] = Field(default_factory=dict)
-
-    @field_validator("date_start", "date_end", mode="after")
-    @classmethod
-    def normalize_event_datetimes(cls, value: datetime.datetime) -> datetime.datetime:
-        return to_db_datetime(value)
 
 class EventCreate(EventBase):
     pass
@@ -35,13 +28,6 @@ class EventUpdate(BaseModel):
     banner_url: str | None = None
     status: str | None = None # DRAFT | PUBLISHED | CLOSED | CANCELLED
     custom_form_schema: dict[str, Any] | None = None
-
-    @field_validator("date_start", "date_end", mode="after")
-    @classmethod
-    def normalize_event_datetimes(cls, value: datetime.datetime | None) -> datetime.datetime | None:
-        if value is None:
-            return None
-        return to_db_datetime(value)
 
 class EventResponse(EventBase):
     id: uuid.UUID

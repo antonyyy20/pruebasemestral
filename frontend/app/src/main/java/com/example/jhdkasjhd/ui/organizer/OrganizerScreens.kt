@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,17 +28,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.example.jhdkasjhd.core.util.StatusLabels
 import com.example.jhdkasjhd.core.quickvntViewModel
 import com.example.jhdkasjhd.data.dto.EventCreateRequest
 import com.example.jhdkasjhd.data.dto.EventResponse
 import com.example.jhdkasjhd.data.dto.EventUpdateRequest
-import com.example.jhdkasjhd.ui.components.CoinbaseBadge
 import com.example.jhdkasjhd.ui.components.CoinbaseEmptyState
-import com.example.jhdkasjhd.ui.components.CoinbaseFeatureCard
-import com.example.jhdkasjhd.ui.components.CoinbaseOutlineButton
 import com.example.jhdkasjhd.ui.components.CoinbasePrimaryButton
-import com.example.jhdkasjhd.ui.components.CoinbaseSecondaryButton
+import androidx.compose.material3.Scaffold
 import com.example.jhdkasjhd.ui.components.ErrorMessage
 import com.example.jhdkasjhd.ui.components.LoadingBox
 import com.example.jhdkasjhd.ui.components.QuickvntScaffold
@@ -47,16 +42,12 @@ import com.example.jhdkasjhd.ui.components.QuickvntTextField
 import com.example.jhdkasjhd.ui.theme.CoinbaseCanvas
 import com.example.jhdkasjhd.ui.theme.CoinbaseInk
 import com.example.jhdkasjhd.ui.theme.CoinbaseMuted
-import com.example.jhdkasjhd.ui.theme.CoinbaseOnPrimary
-import com.example.jhdkasjhd.ui.theme.CoinbasePrimary
 import com.example.jhdkasjhd.ui.theme.CoinbaseSpacing
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import com.example.jhdkasjhd.ui.theme.CoinbaseSemanticDown
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
 
 @Composable
 fun MyEventsScreen(
@@ -67,83 +58,128 @@ fun MyEventsScreen(
     viewModel: OrganizerViewModel = quickvntViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var statusFilterName by rememberSaveable { mutableStateOf(OrganizerEventFilter.ALL.name) }
+    val statusFilter = OrganizerEventFilter.entries.firstOrNull { it.name == statusFilterName }
+        ?: OrganizerEventFilter.ALL
+    var eventIdPendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    val eventPendingDelete = eventIdPendingDelete?.let { id ->
+        uiState.events.firstOrNull { it.id == id }
+    }
 
     LaunchedEffect(Unit) { viewModel.loadMyEvents() }
 
-    QuickvntScaffold(
-        title = "Mis Eventos",
+    val filteredEvents = filterOrganizerEvents(
+        events = uiState.events,
+        query = searchQuery,
+        statusFilter = statusFilter
+    )
+    val summary = summarizeOrganizerEvents(uiState.events)
+
+    if (eventPendingDelete != null) {
+        DeleteEventDialog(
+            eventTitle = eventPendingDelete!!.title,
+            onConfirm = {
+                viewModel.deleteEvent(eventPendingDelete!!.id)
+                eventIdPendingDelete = null
+            },
+            onDismiss = { eventIdPendingDelete = null }
+        )
+    }
+
+    Scaffold(
+        containerColor = CoinbaseCanvas,
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onCreateEvent,
-                containerColor = CoinbasePrimary,
-                contentColor = CoinbaseOnPrimary
-            ) {
-                Text("+", style = MaterialTheme.typography.titleLarge)
-            }
+            MyEventsCreateFab(onClick = onCreateEvent)
         }
     ) { padding ->
         when {
             uiState.isLoading && uiState.events.isEmpty() -> LoadingBox(Modifier.padding(padding))
-            uiState.error != null -> ErrorMessage(uiState.error!!, Modifier.padding(padding)) {
+            uiState.error != null && uiState.events.isEmpty() -> ErrorMessage(uiState.error!!, Modifier.padding(padding)) {
                 viewModel.loadMyEvents()
             }
             uiState.events.isEmpty() -> CoinbaseEmptyState(
-                message = "Aún no has creado eventos.",
+                message = "Aún no has creado eventos.\nEmpieza publicando tu primera experiencia.",
                 modifier = Modifier.padding(padding),
                 actionLabel = "Crear primer evento",
                 onAction = onCreateEvent
             )
             else -> LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(CoinbaseSpacing.base),
-                verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(CoinbaseCanvas)
+                    .padding(padding),
+                contentPadding = PaddingValues(
+                    start = CoinbaseSpacing.base,
+                    end = CoinbaseSpacing.base,
+                    top = CoinbaseSpacing.sm,
+                    bottom = CoinbaseSpacing.xxl
+                ),
+                verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.base)
             ) {
-                items(uiState.events, key = { it.id }) { event ->
-                    OrganizerEventCard(
-                        event = event,
-                        onEdit = { onEditEvent(event.id) },
-                        onPublish = { viewModel.publishEvent(event.id) },
-                        onDelete = { viewModel.deleteEvent(event.id) },
-                        onAnalytics = { onAnalytics(event.id) },
-                        onScan = { onScan(event.id) }
+                item {
+                    MyEventsHeader(summary = summary)
+                }
+
+                item {
+                    MyEventsSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it }
                     )
+                }
+
+                item {
+                    MyEventsStatusFilters(
+                        selected = statusFilter,
+                        onSelected = { statusFilterName = it.name }
+                    )
+                }
+
+                if (uiState.error != null) {
+                    item {
+                        ErrorMessage(
+                            message = uiState.error!!,
+                            onRetry = { viewModel.loadMyEvents() }
+                        )
+                    }
+                }
+
+                if (filteredEvents.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = CoinbaseSpacing.xl),
+                            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)
+                        ) {
+                            Text(
+                                text = "No hay eventos con este filtro",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = CoinbaseInk,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Prueba otro estado o limpia la búsqueda.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CoinbaseMuted
+                            )
+                        }
+                    }
+                } else {
+                    items(filteredEvents, key = { it.id }) { event ->
+                        OrganizerEventCard(
+                            event = event,
+                            onEdit = { onEditEvent(event.id) },
+                            onPublish = { viewModel.publishEvent(event.id) },
+                            onDelete = { eventIdPendingDelete = event.id },
+                            onAnalytics = { onAnalytics(event.id) },
+                            onScan = { onScan(event.id) }
+                        )
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun OrganizerEventCard(
-    event: EventResponse,
-    onEdit: () -> Unit,
-    onPublish: () -> Unit,
-    onDelete: () -> Unit,
-    onAnalytics: () -> Unit,
-    onScan: () -> Unit
-) {
-    CoinbaseFeatureCard {
-        Text(event.title, style = MaterialTheme.typography.titleMedium, color = CoinbaseInk)
-        Spacer(Modifier.height(CoinbaseSpacing.xs))
-        CoinbaseBadge(text = StatusLabels.eventStatus(event.status))
-        Spacer(Modifier.height(CoinbaseSpacing.xs))
-        Text("Capacidad: ${event.capacity}", style = MaterialTheme.typography.bodyMedium)
-        Text("${event.dateStart} → ${event.dateEnd}", style = MaterialTheme.typography.bodySmall, color = CoinbaseMuted)
-
-        Spacer(Modifier.height(CoinbaseSpacing.sm))
-        Row(horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.xs)) {
-            CoinbaseOutlineButton(text = "Editar", onClick = onEdit)
-            if (event.status == "DRAFT") {
-                CoinbasePrimaryButton(text = "Publicar", onClick = onPublish, modifier = Modifier.weight(1f))
-            }
-        }
-        Spacer(Modifier.height(CoinbaseSpacing.xs))
-        Row(horizontalArrangement = Arrangement.spacedBy(CoinbaseSpacing.xs)) {
-            CoinbaseSecondaryButton(text = "Analíticas", onClick = onAnalytics)
-            CoinbaseSecondaryButton(text = "Ingreso QR", onClick = onScan)
-        }
-        Spacer(Modifier.height(CoinbaseSpacing.xs))
-        CoinbaseOutlineButton(text = "Eliminar", onClick = onDelete, modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -159,7 +195,7 @@ fun CreateEventScreen(
     var description by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("") }
     var location by rememberSaveable { mutableStateOf("") }
-    var capacity by rememberSaveable { mutableStateOf("") }
+    var capacity by rememberSaveable { mutableStateOf("50") }
     var bannerUrl by rememberSaveable { mutableStateOf("") }
     var customFormSchema by rememberSaveable { mutableStateOf("") }
     var startDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
@@ -181,27 +217,20 @@ fun CreateEventScreen(
         }
     }
 
-    val parsedCapacity = capacity.trim().toIntOrNull()
-    val parsedSchema = parseCustomFormSchema(customFormSchema)
-    val hasValidBanner = bannerUrl.isBlank() || isValidHttpUrl(bannerUrl)
-    val hasValidDates = startDate != null && startTime != null && endDate != null && endTime != null
-    val hasValidRange = if (hasValidDates) {
-        val start = ZonedDateTime.of(startDate!!, startTime!!, ZoneId.systemDefault())
-        val end = ZonedDateTime.of(endDate!!, endTime!!, ZoneId.systemDefault())
-        !end.isBefore(start)
-    } else {
-        false
-    }
-
-    val isFormValid = eventTitle.isNotBlank() &&
-        description.isNotBlank() &&
-        category.isNotBlank() &&
-        location.isNotBlank() &&
-        hasValidDates &&
-        hasValidRange &&
-        parsedCapacity != null && parsedCapacity > 0 &&
-        hasValidBanner &&
-        parsedSchema.isSuccess
+    val formValidation = validateCreateEventForm(
+        eventTitle = eventTitle,
+        description = description,
+        category = category,
+        location = location,
+        capacity = capacity,
+        bannerUrl = bannerUrl,
+        customFormSchema = customFormSchema,
+        startDate = startDate,
+        startTime = startTime,
+        endDate = endDate,
+        endTime = endTime
+    )
+    val isFormValid = formValidation.isValid
 
     fun submitEvent() {
         showValidationErrors = true
@@ -215,9 +244,9 @@ fun CreateEventScreen(
                 location = location.trim(),
                 dateStart = toIsoDateTime(startDate!!, startTime!!),
                 dateEnd = toIsoDateTime(endDate!!, endTime!!),
-                capacity = parsedCapacity!!,
+                capacity = formValidation.parsedCapacity!!,
                 bannerUrl = bannerUrl.trim().takeIf { it.isNotBlank() },
-                customFormSchema = parsedSchema.getOrDefault(emptyMap())
+                customFormSchema = formValidation.parsedSchema.getOrDefault(emptyMap())
             )
         )
     }
@@ -233,7 +262,6 @@ fun CreateEventScreen(
         CreateEventTopBar(
             onClose = onBack,
             onDone = { submitEvent() },
-            doneEnabled = isFormValid,
             isSaving = uiState.isLoading
         )
 
@@ -278,8 +306,10 @@ fun CreateEventScreen(
                     showTimeError = showValidationErrors && endTime == null
                 )
 
-                if (showValidationErrors && hasValidDates && !hasValidRange) {
-                    CreateEventFieldError("La fecha de fin debe ser igual o posterior al inicio")
+                if (showValidationErrors && formValidation.missingLabels.isNotEmpty()) {
+                    CreateEventFieldError(
+                        "Completa: ${formValidation.missingLabels.joinToString(", ")}"
+                    )
                 }
 
                 CreateEventFilledField(
@@ -317,19 +347,21 @@ fun CreateEventScreen(
                     onValueChange = { capacity = it.filter { char -> char.isDigit() } },
                     placeholder = "Capacidad",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    showError = showValidationErrors && (parsedCapacity == null || parsedCapacity <= 0),
+                    showError = showValidationErrors && (formValidation.parsedCapacity == null || formValidation.parsedCapacity <= 0),
                     errorMessage = "La capacidad debe ser mayor a 0"
                 )
 
-                CreateEventFilledField(
-                    value = customFormSchema,
-                    onValueChange = { customFormSchema = it },
-                    placeholder = "Formulario JSON (opcional). Ej: {\"fields\":[]}",
-                    singleLine = false,
-                    minHeight = 120.dp,
-                    showError = showValidationErrors && parsedSchema.isFailure,
-                    errorMessage = parsedSchema.exceptionOrNull()?.message ?: "JSON inválido"
-                )
+                if (customFormSchema.isNotBlank()) {
+                    CreateEventFilledField(
+                        value = customFormSchema,
+                        onValueChange = { customFormSchema = it },
+                        placeholder = "Formulario JSON (opcional). Ej: {\"fields\":[]}",
+                        singleLine = false,
+                        minHeight = 120.dp,
+                        showError = showValidationErrors && formValidation.parsedSchema.isFailure,
+                        errorMessage = formValidation.parsedSchema.exceptionOrNull()?.message ?: "JSON inválido"
+                    )
+                }
 
                 uiState.error?.let { message ->
                     Text(
@@ -350,10 +382,16 @@ fun CreateEventScreen(
             initialDate = startDate,
             onDismiss = { showStartDatePicker = false },
             onConfirm = { selected ->
-                startDate = selected
-                if (endDate == null || endDate!!.isBefore(selected)) {
-                    endDate = selected
-                }
+                val defaults = applyStartDateDefaults(
+                    selected = selected,
+                    currentStartTime = startTime,
+                    currentEndDate = endDate,
+                    currentEndTime = endTime
+                )
+                startDate = defaults.startDate
+                startTime = defaults.startTime
+                endDate = defaults.endDate
+                endTime = defaults.endTime
             }
         )
     }
@@ -365,13 +403,7 @@ fun CreateEventScreen(
             onConfirm = { selected ->
                 startTime = selected
                 if (endTime == null) {
-                    endTime = selected.plusHours(2).let { adjusted ->
-                        if (adjusted.toSecondOfDay() < selected.toSecondOfDay()) {
-                            LocalTime.of(23, 59)
-                        } else {
-                            adjusted
-                        }
-                    }
+                    endTime = defaultCreateEventEndTime(selected)
                 }
             }
         )

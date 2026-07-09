@@ -118,7 +118,6 @@ internal fun parseIsoToTime(iso: String?): LocalTime? {
 internal fun CreateEventTopBar(
     onClose: () -> Unit,
     onDone: () -> Unit,
-    doneEnabled: Boolean,
     isSaving: Boolean
 ) {
     Row(
@@ -147,13 +146,13 @@ internal fun CreateEventTopBar(
 
         TextButton(
             onClick = onDone,
-            enabled = doneEnabled && !isSaving
+            enabled = !isSaving
         ) {
             Text(
                 text = if (isSaving) "..." else "Listo",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = if (doneEnabled && !isSaving) {
+                    color = if (!isSaving) {
                         CoinbasePrimary
                     } else {
                         CoinbasePrimaryDisabled
@@ -513,6 +512,7 @@ internal fun CreateEventDatePickerDialog(
 ) {
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = initialDate?.let { localDateToPickerMillis(it) }
+            ?: localDateToPickerMillis(LocalDate.now())
     )
 
     DatePickerDialog(

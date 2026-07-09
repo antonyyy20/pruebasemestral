@@ -1,8 +1,9 @@
 import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, and_, or_
+from sqlmodel import select
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -103,12 +104,35 @@ async def validate_checkin(
         ticket_id=ticket.id,
         validated_by=current_user.id
     )
-    
+
     ticket.status = "CHECKED_IN"
-    
-    db.add(new_checkin)
-    db.add(ticket)
-    await db.commit()
-    await db.refresh(new_checkin)
-    
-    return new_checkin
+
+    try:
+        db.add(new_checkin)
+        db.add(ticket)
+        await db.commit()
+        await db.refresh(new_checkin)
+        return new_checkin
+    except HTTPException:
+        await db.rollback()
+        raise
+    except IntegrityError as exc:
+        await db.rollback()
+        detail = str(getattr(exc, "orig", exc))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No se pudo registrar el ingreso: {detail}",
+        ) from exc
+    except SQLAlchemyError as exc:
+        await db.rollback()
+        detail = str(getattr(exc, "orig", exc))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al guardar el check-in: {detail}",
+        ) from exc
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error inesperado al validar el QR: {str(exc)}",
+        ) from exc
