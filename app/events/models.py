@@ -5,6 +5,8 @@ from typing import Any
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import SQLModel, Field, Column
 
+from app.core.datetime_utils import utcnow_naive
+
 
 class Event(SQLModel, table=True):
     __tablename__ = "events"
@@ -27,7 +29,7 @@ class Event(SQLModel, table=True):
     )
     
     created_at: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
+        default_factory=utcnow_naive,
         nullable=False
     )
 
