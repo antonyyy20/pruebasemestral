@@ -14,6 +14,7 @@ from app.events.schemas import (
     StaffCreateRequest, StaffMemberResponse,
 )
 from app.events.staff_service import resolve_or_create_staff_profile
+from app.users.profile_service import sync_profile_role
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -39,12 +40,14 @@ async def list_my_events(
 
 @router.get("/staff/mine", response_model=list[EventResponse])
 async def list_staff_events(
-    current_user: Annotated[Profile, Depends(require_role(["STAFF"]))],
+    current_user: Annotated[Profile, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=100),
 ):
     """List events where the authenticated staff member is assigned."""
+    current_user = await sync_profile_role(db, current_user)
+
     query = (
         select(Event)
         .join(StaffAssignment, StaffAssignment.event_id == Event.id)

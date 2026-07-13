@@ -10,6 +10,7 @@ from app.auth.schemas import TokenRefresh, TokenResponse, UserLogin, UserRegiste
 from app.core.config import settings
 from app.core.database import get_db
 from app.users.models import Profile
+from app.users.profile_service import sync_profile_role
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -48,8 +49,17 @@ async def upsert_profile_for_register(
     """Create or update profile on register so the chosen role is always persisted."""
     profile = await get_profile(db, user_id)
     if profile:
+        if profile.role == "STAFF":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Esta cuenta es de staff y fue creada por un organizador. "
+                    "Usa inicio de sesión con el correo y contraseña que te dieron."
+                ),
+            )
         profile.name = name
-        profile.role = role
+        if profile.role != "ORGANIZER":
+            profile.role = role
     else:
         profile = Profile(id=user_id, name=name, role=role)
         db.add(profile)
@@ -118,7 +128,10 @@ async def register(
         if "User already registered" in error_msg or "already been registered" in error_msg:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Este email ya está registrado. Usa login en su lugar.",
+                detail=(
+                    "Este email ya está registrado. Si eres staff, usa inicio de sesión "
+                    "con las credenciales que te dio el organizador."
+                ),
             ) from e
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -158,6 +171,7 @@ async def login(
             name=default_name,
             role=default_role,
         )
+        profile = await sync_profile_role(db, profile, metadata)
         return build_token_response(auth_response, profile)
 
     except HTTPException:
@@ -193,6 +207,8 @@ async def refresh_token(
                 detail="Perfil de usuario no encontrado",
             )
 
+        metadata = auth_response.user.user_metadata or {}
+        profile = await sync_profile_role(db, profile, metadata)
         return build_token_response(auth_response, profile)
 
     except HTTPException:

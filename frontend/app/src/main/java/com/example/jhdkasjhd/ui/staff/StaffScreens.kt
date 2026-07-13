@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.example.jhdkasjhd.core.quickvntViewModel
 import com.example.jhdkasjhd.data.dto.EventResponse
 import com.example.jhdkasjhd.data.dto.StaffMemberResponse
+import com.example.jhdkasjhd.ui.auth.AuthViewModel
 import com.example.jhdkasjhd.ui.components.CoinbaseEmptyState
 import com.example.jhdkasjhd.ui.components.CoinbasePrimaryButton
 import com.example.jhdkasjhd.ui.components.ErrorMessage
@@ -57,11 +58,17 @@ import com.example.jhdkasjhd.ui.theme.CoinbaseSpacing
 @Composable
 fun StaffEventsScreen(
     onScan: (String) -> Unit,
-    viewModel: StaffEventsViewModel = quickvntViewModel()
+    viewModel: StaffEventsViewModel = quickvntViewModel(),
+    authViewModel: AuthViewModel = quickvntViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val session by authViewModel.session.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.loadAssignedEvents() }
+    LaunchedEffect(session?.userId) {
+        if (session != null) {
+            viewModel.loadAssignedEvents()
+        }
+    }
 
     QuickvntScaffold(
         title = "Mis eventos"
@@ -71,7 +78,7 @@ fun StaffEventsScreen(
             uiState.error != null -> ErrorMessage(uiState.error!!, Modifier.padding(padding))
             uiState.events.isEmpty() -> {
                 CoinbaseEmptyState(
-                    message = "Sin eventos asignados. El organizador debe asignarte a un evento para validar ingresos.",
+                    message = "Sin eventos asignados. Pide al organizador que te cree desde Staff en su evento e inicia sesión (no te registres como asistente).",
                     modifier = Modifier.padding(padding)
                 )
             }

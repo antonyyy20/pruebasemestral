@@ -33,7 +33,12 @@ class AuthRepository(
     }.mapError()
 
     suspend fun getProfile(): Result<ProfileResponse> = runCatching {
-        api.getProfile()
+        val response = api.getProfile()
+        tokenStore.updateUserRole(response.role)
+        if (response.name.isNotBlank()) {
+            tokenStore.updateUserName(response.name)
+        }
+        response
     }
 
     suspend fun updateProfile(name: String): Result<ProfileResponse> = runCatching {

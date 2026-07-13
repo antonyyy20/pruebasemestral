@@ -33,6 +33,7 @@ import com.example.jhdkasjhd.core.quickvntViewModel
 import com.example.jhdkasjhd.data.dto.ProfileResponse
 import com.example.jhdkasjhd.ui.auth.AuthFormTextField
 import com.example.jhdkasjhd.ui.auth.AuthViewModel
+import com.example.jhdkasjhd.ui.staff.StaffEventsViewModel
 import com.example.jhdkasjhd.ui.components.CoinbaseBadge
 import com.example.jhdkasjhd.ui.components.CoinbaseFeatureCard
 import com.example.jhdkasjhd.ui.components.CoinbaseInlineMessage
@@ -54,17 +55,27 @@ import kotlinx.coroutines.delay
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit,
-    authViewModel: AuthViewModel = quickvntViewModel()
+    authViewModel: AuthViewModel = quickvntViewModel(),
+    staffEventsViewModel: StaffEventsViewModel = quickvntViewModel()
 ) {
     val session by authViewModel.session.collectAsState()
     val storedBio by authViewModel.userBio.collectAsState()
     val profileUiState by authViewModel.profileUiState.collectAsState()
+    val staffUiState by staffEventsViewModel.uiState.collectAsState()
 
     var name by rememberSaveable { mutableStateOf("") }
     var bio by rememberSaveable { mutableStateOf("") }
 
+    val isStaff = profileUiState.profile?.role == "STAFF" || session?.isStaff == true
+
     LaunchedEffect(Unit) {
         authViewModel.loadProfile()
+    }
+
+    LaunchedEffect(session?.userId, isStaff) {
+        if (session != null && isStaff) {
+            staffEventsViewModel.loadAssignedEvents()
+        }
     }
 
     LaunchedEffect(session?.name) {
@@ -115,8 +126,19 @@ fun ProfileScreen(
                         ProfileHeroCard(
                             session = session,
                             profile = profileUiState.profile,
-                            displayName = name.ifBlank { session?.name.orEmpty() }
+                            displayName = name.ifBlank { session?.name.orEmpty() },
+                            assignedEventsCount = if (isStaff) staffUiState.events.size else null
                         )
+                    }
+
+                    if (isStaff) {
+                        item {
+                            StaffAssignmentsCard(
+                                events = staffUiState.events,
+                                isLoading = staffUiState.isLoading,
+                                error = staffUiState.error
+                            )
+                        }
                     }
 
                     item {
@@ -190,7 +212,8 @@ fun ProfileScreen(
 private fun ProfileHeroCard(
     session: UserSession?,
     profile: ProfileResponse?,
-    displayName: String
+    displayName: String,
+    assignedEventsCount: Int? = null
 ) {
     val initial = displayName.trim().firstOrNull()?.uppercaseChar()?.toString().orEmpty().ifBlank { "?" }
     val isOrganizer = profile?.role == "ORGANIZER" || session?.isOrganizer == true
@@ -248,6 +271,63 @@ private fun ProfileHeroCard(
                         else -> "Asistente"
                     }
                 )
+                if (isStaff) {
+                    Text(
+                        text = when (assignedEventsCount) {
+                            null -> "Cargando eventos asignados..."
+                            0 -> "Sin eventos vinculados aún"
+                            1 -> "1 evento asignado"
+                            else -> "$assignedEventsCount eventos asignados"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (assignedEventsCount == 0) CoinbaseMuted else CoinbasePrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StaffAssignmentsCard(
+    events: List<com.example.jhdkasjhd.data.dto.EventResponse>,
+    isLoading: Boolean,
+    error: String?
+) {
+    CoinbaseFeatureCard {
+        Column(verticalArrangement = Arrangement.spacedBy(CoinbaseSpacing.sm)) {
+            CoinbaseSectionTitle(text = "Eventos asignados")
+            when {
+                isLoading && events.isEmpty() -> {
+                    Text(
+                        text = "Cargando...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CoinbaseMuted
+                    )
+                }
+                error != null -> {
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CoinbaseMuted
+                    )
+                }
+                events.isEmpty() -> {
+                    Text(
+                        text = "El organizador debe crearte desde Staff en su evento. Luego inicia sesión con ese correo y contraseña.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CoinbaseMuted
+                    )
+                }
+                else -> {
+                    events.forEach { event ->
+                        Text(
+                            text = "• ${event.title}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CoinbaseInk
+                        )
+                    }
+                }
             }
         }
     }

@@ -115,6 +115,12 @@ class TokenStore(context: Context) {
         }
     }
 
+    suspend fun updateUserRole(role: String) {
+        appContext.dataStore.edit { prefs ->
+            prefs[Keys.USER_ROLE] = role
+        }
+    }
+
     val userBioFlow: Flow<String> = appContext.dataStore.data.map { prefs ->
         prefs[Keys.USER_BIO].orEmpty()
     }
