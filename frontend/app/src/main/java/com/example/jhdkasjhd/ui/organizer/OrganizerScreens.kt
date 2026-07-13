@@ -55,6 +55,7 @@ fun MyEventsScreen(
     onEditEvent: (String) -> Unit,
     onAnalytics: (String) -> Unit,
     onScan: (String) -> Unit,
+    onManageStaff: (String) -> Unit,
     viewModel: OrganizerViewModel = quickvntViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -174,7 +175,8 @@ fun MyEventsScreen(
                             onPublish = { viewModel.publishEvent(event.id) },
                             onDelete = { eventIdPendingDelete = event.id },
                             onAnalytics = { onAnalytics(event.id) },
-                            onScan = { onScan(event.id) }
+                            onScan = { onScan(event.id) },
+                            onManageStaff = { onManageStaff(event.id) }
                         )
                     }
                 }

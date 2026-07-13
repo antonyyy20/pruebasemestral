@@ -48,14 +48,18 @@ data class EventUpdateRequest(
 )
 
 @JsonClass(generateAdapter = true)
-data class StaffAssignmentRequest(
-    @Json(name = "user_id") val userId: String
+data class StaffCreateRequest(
+    val email: String,
+    val password: String,
+    val name: String
 )
 
 @JsonClass(generateAdapter = true)
-data class StaffAssignmentResponse(
+data class StaffMemberResponse(
     val id: String,
     @Json(name = "event_id") val eventId: String,
     @Json(name = "user_id") val userId: String,
+    val name: String,
+    val role: String,
     @Json(name = "assigned_at") val assignedAt: String
 )

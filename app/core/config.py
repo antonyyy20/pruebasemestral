@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # Supabase Configuration
     SUPABASE_URL: str = Field(default="https://your-supabase-project.supabase.co")
     SUPABASE_KEY: str = Field(default="your-anon-key")
+    SUPABASE_SERVICE_ROLE_KEY: str = Field(default="")
     SUPABASE_JWT_SECRET: str = Field(default="your-jwt-secret")
 
     # PostgreSQL (Supabase pooler) — DATABASE_URL o variables DB_* por separado

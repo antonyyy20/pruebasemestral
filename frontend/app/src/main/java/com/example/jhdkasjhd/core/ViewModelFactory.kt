@@ -11,6 +11,8 @@ import com.example.jhdkasjhd.ui.auth.AuthViewModel
 import com.example.jhdkasjhd.ui.checkin.CheckinViewModel
 import com.example.jhdkasjhd.ui.marketplace.MarketplaceViewModel
 import com.example.jhdkasjhd.ui.organizer.OrganizerViewModel
+import com.example.jhdkasjhd.ui.staff.StaffEventsViewModel
+import com.example.jhdkasjhd.ui.staff.StaffManagementViewModel
 import com.example.jhdkasjhd.ui.tickets.TicketsViewModel
 
 class QuickvntViewModelFactory(
@@ -36,6 +38,10 @@ class QuickvntViewModelFactory(
                 CheckinViewModel(container.ticketRepository) as T
             modelClass.isAssignableFrom(AnalyticsViewModel::class.java) ->
                 AnalyticsViewModel(container.ticketRepository) as T
+            modelClass.isAssignableFrom(StaffEventsViewModel::class.java) ->
+                StaffEventsViewModel(container.eventRepository) as T
+            modelClass.isAssignableFrom(StaffManagementViewModel::class.java) ->
+                StaffManagementViewModel(container.eventRepository) as T
             else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
         }
     }

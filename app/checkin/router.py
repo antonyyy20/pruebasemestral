@@ -55,19 +55,19 @@ async def validate_checkin(
         )
 
     is_organizer = event.organizer_id == current_user.id
-    
-    # Check if staff
+
     staff_query = select(StaffAssignment).where(
         StaffAssignment.event_id == event.id,
-        StaffAssignment.user_id == current_user.id
+        StaffAssignment.user_id == current_user.id,
     )
     staff_result = await db.execute(staff_query)
-    is_staff = staff_result.scalar_one_or_none() is not None
+    is_assigned_staff = staff_result.scalar_one_or_none() is not None
+    is_staff = is_assigned_staff and current_user.role == "STAFF"
 
     if not (is_organizer or is_staff):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el organizador del evento o el staff asignado puede validar ingresos"
+            detail="Solo el organizador del evento o el staff asignado puede validar ingresos",
         )
 
     # 3. Verify cryptographic QR signature

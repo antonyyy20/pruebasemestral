@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
@@ -245,6 +246,7 @@ internal fun OrganizerEventCard(
     onDelete: () -> Unit,
     onAnalytics: () -> Unit,
     onScan: () -> Unit,
+    onManageStaff: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -332,6 +334,11 @@ internal fun OrganizerEventCard(
                     icon = Icons.Default.QrCodeScanner,
                     label = "Check-in",
                     onClick = onScan
+                )
+                OrganizerEventAction(
+                    icon = Icons.Default.PersonAdd,
+                    label = "Staff",
+                    onClick = onManageStaff
                 )
                 OrganizerEventAction(
                     icon = Icons.Default.DeleteOutline,

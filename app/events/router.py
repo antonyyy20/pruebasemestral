@@ -10,9 +10,10 @@ from app.core.security import get_current_user, require_role
 from app.users.models import Profile
 from app.events.models import Event, StaffAssignment
 from app.events.schemas import (
-    EventCreate, EventUpdate, EventResponse, 
-    StaffAssignmentBase, StaffAssignmentResponse
+    EventCreate, EventUpdate, EventResponse,
+    StaffCreateRequest, StaffMemberResponse,
 )
+from app.events.staff_service import resolve_or_create_staff_profile
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -28,6 +29,26 @@ async def list_my_events(
     query = (
         select(Event)
         .where(Event.organizer_id == current_user.id)
+        .order_by(Event.date_start.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
+@router.get("/staff/mine", response_model=list[EventResponse])
+async def list_staff_events(
+    current_user: Annotated[Profile, Depends(require_role(["STAFF"]))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+):
+    """List events where the authenticated staff member is assigned."""
+    query = (
+        select(Event)
+        .join(StaffAssignment, StaffAssignment.event_id == Event.id)
+        .where(StaffAssignment.user_id == current_user.id)
         .order_by(Event.date_start.desc())
         .offset(skip)
         .limit(limit)
@@ -179,54 +200,135 @@ async def delete_event(
     await db.commit()
     return None
 
-@router.post("/{id}/staff", response_model=StaffAssignmentResponse, status_code=status.HTTP_201_CREATED)
-async def assign_staff(
+@router.get("/{id}/staff", response_model=list[StaffMemberResponse])
+async def list_event_staff(
     id: uuid.UUID,
-    assignment: StaffAssignmentBase,
     current_user: Annotated[Profile, Depends(require_role(["ORGANIZER"]))],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Assign staff to an event. Restricted to the event organizer."""
-    # Verify event exists and is owned by current_user
+    """List staff assigned to an event. Restricted to the event organizer."""
     result = await db.execute(select(Event).where(Event.id == id))
     event = result.scalar_one_or_none()
     if not event:
         raise HTTPException(status_code=404, detail="Evento no encontrado")
-        
+
     if event.organizer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No eres el organizador de este evento"
+            detail="No eres el organizador de este evento",
         )
-    
-    # Verify user being assigned exists
-    user_result = await db.execute(
-        select(Profile).where(Profile.id == uuid.UUID(assignment.user_id))
+
+    query = (
+        select(StaffAssignment, Profile)
+        .join(Profile, Profile.id == StaffAssignment.user_id)
+        .where(StaffAssignment.event_id == id)
+        .order_by(StaffAssignment.assigned_at.desc())
     )
-    staff_profile = user_result.scalar_one_or_none()
-    if not staff_profile:
-        raise HTTPException(status_code=404, detail="Usuario a asignar como staff no encontrado")
-        
-    # Check if already assigned
+    rows = await db.execute(query)
+    members: list[StaffMemberResponse] = []
+    for assignment, profile in rows.all():
+        members.append(
+            StaffMemberResponse(
+                id=assignment.id,
+                event_id=assignment.event_id,
+                user_id=str(assignment.user_id),
+                name=profile.name,
+                role=profile.role,
+                assigned_at=assignment.assigned_at,
+            )
+        )
+    return members
+
+
+@router.post("/{id}/staff", response_model=StaffMemberResponse, status_code=status.HTTP_201_CREATED)
+async def create_and_assign_staff(
+    id: uuid.UUID,
+    staff_data: StaffCreateRequest,
+    current_user: Annotated[Profile, Depends(require_role(["ORGANIZER"]))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Create a staff account (email + password) and assign it to an event."""
+    result = await db.execute(select(Event).where(Event.id == id))
+    event = result.scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    if event.organizer_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No eres el organizador de este evento",
+        )
+
+    staff_profile = await resolve_or_create_staff_profile(
+        db=db,
+        email=str(staff_data.email),
+        password=staff_data.password,
+        name=staff_data.name,
+    )
+
     existing_result = await db.execute(
         select(StaffAssignment).where(
             and_(
                 StaffAssignment.event_id == id,
-                StaffAssignment.user_id == uuid.UUID(assignment.user_id),
+                StaffAssignment.user_id == staff_profile.id,
             )
         )
     )
     if existing_result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El usuario ya está asignado al staff de este evento"
+            detail="Este usuario ya está asignado al staff de este evento",
         )
-        
+
     staff_assign = StaffAssignment(
         event_id=id,
-        user_id=uuid.UUID(assignment.user_id),
+        user_id=staff_profile.id,
     )
     db.add(staff_assign)
     await db.commit()
     await db.refresh(staff_assign)
-    return staff_assign
+
+    return StaffMemberResponse(
+        id=staff_assign.id,
+        event_id=staff_assign.event_id,
+        user_id=str(staff_assign.user_id),
+        name=staff_profile.name,
+        role=staff_profile.role,
+        assigned_at=staff_assign.assigned_at,
+    )
+
+
+@router.delete("/{id}/staff/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_staff_assignment(
+    id: uuid.UUID,
+    user_id: uuid.UUID,
+    current_user: Annotated[Profile, Depends(require_role(["ORGANIZER"]))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Remove a staff assignment from an event."""
+    result = await db.execute(select(Event).where(Event.id == id))
+    event = result.scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    if event.organizer_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No eres el organizador de este evento",
+        )
+
+    assignment_result = await db.execute(
+        select(StaffAssignment).where(
+            and_(
+                StaffAssignment.event_id == id,
+                StaffAssignment.user_id == user_id,
+            )
+        )
+    )
+    assignment = assignment_result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Asignación de staff no encontrada")
+
+    await db.delete(assignment)
+    await db.commit()
+    return None

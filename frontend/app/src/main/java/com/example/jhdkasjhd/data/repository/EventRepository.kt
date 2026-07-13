@@ -5,8 +5,8 @@ import com.example.jhdkasjhd.core.network.QuickvntApi
 import com.example.jhdkasjhd.data.dto.EventCreateRequest
 import com.example.jhdkasjhd.data.dto.EventResponse
 import com.example.jhdkasjhd.data.dto.EventUpdateRequest
-import com.example.jhdkasjhd.data.dto.StaffAssignmentRequest
-import com.example.jhdkasjhd.data.dto.StaffAssignmentResponse
+import com.example.jhdkasjhd.data.dto.StaffCreateRequest
+import com.example.jhdkasjhd.data.dto.StaffMemberResponse
 
 class EventRepository(
     private val api: QuickvntApi
@@ -42,7 +42,24 @@ class EventRepository(
         api.deleteEvent(id)
     }
 
-    suspend fun assignStaff(eventId: String, userId: String): Result<StaffAssignmentResponse> = runCatching {
-        api.assignStaff(eventId, StaffAssignmentRequest(userId))
-    }
+    suspend fun listStaffEvents(): Result<List<EventResponse>> = runCatching {
+        api.listStaffEvents()
+    }.mapNetworkError()
+
+    suspend fun listEventStaff(eventId: String): Result<List<StaffMemberResponse>> = runCatching {
+        api.listEventStaff(eventId)
+    }.mapNetworkError()
+
+    suspend fun createStaff(
+        eventId: String,
+        email: String,
+        password: String,
+        name: String
+    ): Result<StaffMemberResponse> = runCatching {
+        api.createStaff(eventId, StaffCreateRequest(email = email, password = password, name = name))
+    }.mapNetworkError()
+
+    suspend fun removeStaff(eventId: String, userId: String): Result<Unit> = runCatching {
+        api.removeStaff(eventId, userId)
+    }.mapNetworkError()
 }

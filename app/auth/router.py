@@ -147,11 +147,16 @@ async def login(
             )
 
         user_id = uuid.UUID(str(auth_response.user.id))
+        metadata = auth_response.user.user_metadata or {}
+        default_role = str(metadata.get("role", "ATTENDEE")).upper()
+        if default_role not in {"ATTENDEE", "ORGANIZER", "STAFF"}:
+            default_role = "ATTENDEE"
+        default_name = str(metadata.get("name") or credentials.email.split("@")[0])
         profile = await get_or_create_profile(
             db=db,
             user_id=user_id,
-            name=credentials.email.split("@")[0],
-            role="ATTENDEE",
+            name=default_name,
+            role=default_role,
         )
         return build_token_response(auth_response, profile)
 

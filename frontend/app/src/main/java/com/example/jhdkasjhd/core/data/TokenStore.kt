@@ -135,4 +135,5 @@ data class UserSession(
 ) {
     val isOrganizer: Boolean get() = role == "ORGANIZER"
     val isAttendee: Boolean get() = role == "ATTENDEE"
+    val isStaff: Boolean get() = role == "STAFF"
 }

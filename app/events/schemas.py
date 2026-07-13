@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from typing import Any
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 class EventBase(BaseModel):
     title: str
@@ -43,8 +43,23 @@ class EventResponse(EventBase):
     class Config:
         from_attributes = True
 
-class StaffAssignmentBase(BaseModel):
+class StaffCreateRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6)
+    name: str = Field(min_length=2)
+
+
+class StaffMemberResponse(BaseModel):
+    id: uuid.UUID
+    event_id: uuid.UUID
     user_id: str
+    name: str
+    role: str
+    assigned_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
 
 class StaffAssignmentResponse(BaseModel):
     id: uuid.UUID

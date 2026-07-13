@@ -9,7 +9,7 @@ class Profile(SQLModel, table=True):
 
     id: uuid.UUID = Field(primary_key=True, description="Corresponds to auth.users.id UUID")
     name: str
-    role: str = Field(default="ATTENDEE", description="ATTENDEE or ORGANIZER")
+    role: str = Field(default="ATTENDEE", description="ATTENDEE, ORGANIZER or STAFF")
     created_at: datetime.datetime = Field(
         default_factory=datetime.datetime.utcnow,
         nullable=False,

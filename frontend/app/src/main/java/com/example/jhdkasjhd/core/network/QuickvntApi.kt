@@ -11,8 +11,8 @@ import com.example.jhdkasjhd.data.dto.ProfileResponse
 import com.example.jhdkasjhd.data.dto.ProfileUpdateRequest
 import com.example.jhdkasjhd.data.dto.RefreshRequest
 import com.example.jhdkasjhd.data.dto.RegisterRequest
-import com.example.jhdkasjhd.data.dto.StaffAssignmentRequest
-import com.example.jhdkasjhd.data.dto.StaffAssignmentResponse
+import com.example.jhdkasjhd.data.dto.StaffCreateRequest
+import com.example.jhdkasjhd.data.dto.StaffMemberResponse
 import com.example.jhdkasjhd.data.dto.TicketCreateRequest
 import com.example.jhdkasjhd.data.dto.TicketResponse
 import com.example.jhdkasjhd.data.dto.TokenResponse
@@ -70,11 +70,26 @@ interface QuickvntApi {
     @DELETE("events/{id}")
     suspend fun deleteEvent(@Path("id") id: String)
 
+    @GET("events/staff/mine")
+    suspend fun listStaffEvents(
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 50
+    ): List<EventResponse>
+
+    @GET("events/{id}/staff")
+    suspend fun listEventStaff(@Path("id") eventId: String): List<StaffMemberResponse>
+
     @POST("events/{id}/staff")
-    suspend fun assignStaff(
+    suspend fun createStaff(
         @Path("id") eventId: String,
-        @Body body: StaffAssignmentRequest
-    ): StaffAssignmentResponse
+        @Body body: StaffCreateRequest
+    ): StaffMemberResponse
+
+    @DELETE("events/{id}/staff/{userId}")
+    suspend fun removeStaff(
+        @Path("id") eventId: String,
+        @Path("userId") userId: String
+    )
 
     @POST("tickets/register/{eventId}")
     suspend fun registerToEvent(

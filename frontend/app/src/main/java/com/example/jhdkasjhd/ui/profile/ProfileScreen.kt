@@ -194,6 +194,7 @@ private fun ProfileHeroCard(
 ) {
     val initial = displayName.trim().firstOrNull()?.uppercaseChar()?.toString().orEmpty().ifBlank { "?" }
     val isOrganizer = profile?.role == "ORGANIZER" || session?.isOrganizer == true
+    val isStaff = profile?.role == "STAFF" || session?.isStaff == true
 
     CoinbaseFeatureCard {
         Row(
@@ -232,16 +233,20 @@ private fun ProfileHeroCard(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = if (isOrganizer) {
-                        "Gestiona y publica tus eventos"
-                    } else {
-                        "Descubre y reserva experiencias"
+                    text = when {
+                        isOrganizer -> "Gestiona y publica tus eventos"
+                        isStaff -> "Valida ingresos en eventos asignados"
+                        else -> "Descubre y reserva experiencias"
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = CoinbaseMuted
                 )
                 CoinbaseBadge(
-                    text = if (isOrganizer) "Organizador" else "Asistente"
+                    text = when {
+                        isOrganizer -> "Organizador"
+                        isStaff -> "Staff"
+                        else -> "Asistente"
+                    }
                 )
             }
         }

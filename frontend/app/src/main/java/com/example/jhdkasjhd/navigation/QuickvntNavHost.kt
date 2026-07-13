@@ -38,6 +38,8 @@ import com.example.jhdkasjhd.ui.organizer.CreateEventScreen
 import com.example.jhdkasjhd.ui.organizer.EditEventScreen
 import com.example.jhdkasjhd.ui.organizer.MyEventsScreen
 import com.example.jhdkasjhd.ui.profile.ProfileScreen
+import com.example.jhdkasjhd.ui.staff.ManageStaffScreen
+import com.example.jhdkasjhd.ui.staff.StaffEventsScreen
 import com.example.jhdkasjhd.ui.splash.SplashScreen
 import com.example.jhdkasjhd.ui.splash.WelcomeScreen
 import com.example.jhdkasjhd.ui.tickets.MyTicketsScreen
@@ -56,6 +58,7 @@ private sealed class BottomTab(val route: String, val label: String) {
     data object Categories : BottomTab(Routes.CATEGORIES, "Categorías")
     data object Tickets : BottomTab(Routes.MY_TICKETS, "Boletos")
     data object MyEvents : BottomTab(Routes.MY_EVENTS, "Mis Eventos")
+    data object StaffEvents : BottomTab(Routes.STAFF_EVENTS, "Mis Eventos")
     data object Profile : BottomTab(Routes.PROFILE, "Perfil")
 }
 
@@ -74,6 +77,7 @@ fun QuickvntNavHost(
         Routes.CATEGORIES,
         Routes.MY_TICKETS,
         Routes.MY_EVENTS,
+        Routes.STAFF_EVENTS,
         Routes.PROFILE
     ) || (currentRoute?.startsWith("marketplace/category/") == true)
 
@@ -81,10 +85,10 @@ fun QuickvntNavHost(
         containerColor = CoinbaseCanvas,
         bottomBar = {
             if (showBottomBar && session != null) {
-                val tabs = if (session!!.isOrganizer) {
-                    listOf(BottomTab.MyEvents, BottomTab.Home, BottomTab.Profile)
-                } else {
-                    listOf(BottomTab.Home, BottomTab.Categories, BottomTab.Tickets, BottomTab.Profile)
+                val tabs = when {
+                    session!!.isOrganizer -> listOf(BottomTab.MyEvents, BottomTab.Home, BottomTab.Profile)
+                    session!!.isStaff -> listOf(BottomTab.StaffEvents, BottomTab.Profile)
+                    else -> listOf(BottomTab.Home, BottomTab.Categories, BottomTab.Tickets, BottomTab.Profile)
                 }
 
                 NavigationBar(
@@ -122,6 +126,7 @@ fun QuickvntNavHost(
                                         BottomTab.Categories -> Icons.Default.GridView
                                         BottomTab.Tickets -> Icons.Default.Event
                                         BottomTab.MyEvents -> Icons.Default.Event
+                                        BottomTab.StaffEvents -> Icons.Default.Event
                                         BottomTab.Profile -> Icons.Default.Person
                                     },
                                     contentDescription = tab.label
@@ -143,7 +148,7 @@ fun QuickvntNavHost(
                 SplashScreen(
                     onFinished = {
                         val destination = if (session != null) {
-                            if (session!!.isOrganizer) Routes.MY_EVENTS else Routes.MARKETPLACE
+                            Routes.homeForRole(session!!.role)
                         } else {
                             Routes.WELCOME
                         }
@@ -167,9 +172,8 @@ fun QuickvntNavHost(
             composable(Routes.LOGIN) {
                 LoginScreen(
                     onNavigateRegister = { navController.navigate(Routes.REGISTER) },
-                    onLoginSuccess = { isOrganizer ->
-                        val dest = if (isOrganizer) Routes.MY_EVENTS else Routes.MARKETPLACE
-                        navController.navigate(dest) {
+                    onLoginSuccess = { role ->
+                        navController.navigate(Routes.homeForRole(role)) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
                     }
@@ -179,9 +183,8 @@ fun QuickvntNavHost(
             composable(Routes.REGISTER) {
                 RegisterScreen(
                     onNavigateLogin = { navController.popBackStack() },
-                    onRegisterSuccess = { isOrganizer ->
-                        val dest = if (isOrganizer) Routes.MY_EVENTS else Routes.MARKETPLACE
-                        navController.navigate(dest) {
+                    onRegisterSuccess = { role ->
+                        navController.navigate(Routes.homeForRole(role)) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
                     }
@@ -282,7 +285,25 @@ fun QuickvntNavHost(
                     onCreateEvent = { navController.navigate(Routes.CREATE_EVENT) },
                     onEditEvent = { eventId -> navController.navigate(Routes.editEvent(eventId)) },
                     onAnalytics = { eventId -> navController.navigate(Routes.analytics(eventId)) },
+                    onScan = { eventId -> navController.navigate(Routes.qrScanner(eventId)) },
+                    onManageStaff = { eventId -> navController.navigate(Routes.manageStaff(eventId)) }
+                )
+            }
+
+            composable(Routes.STAFF_EVENTS) {
+                StaffEventsScreen(
                     onScan = { eventId -> navController.navigate(Routes.qrScanner(eventId)) }
+                )
+            }
+
+            composable(
+                route = Routes.MANAGE_STAFF,
+                arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+            ) { backStack ->
+                val eventId = backStack.arguments?.getString("eventId").orEmpty()
+                ManageStaffScreen(
+                    eventId = eventId,
+                    onBack = { navController.popBackStack() }
                 )
             }
 

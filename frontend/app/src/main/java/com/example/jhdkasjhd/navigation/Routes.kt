@@ -16,8 +16,10 @@ object Routes {
     const val MY_TICKETS = "my_tickets"
     const val TICKET_DETAIL = "ticket_detail/{ticketId}"
     const val MY_EVENTS = "my_events"
+    const val STAFF_EVENTS = "staff_events"
     const val CREATE_EVENT = "create_event"
     const val EDIT_EVENT = "edit_event/{eventId}"
+    const val MANAGE_STAFF = "manage_staff/{eventId}"
     const val ANALYTICS = "analytics/{eventId}"
     const val QR_SCANNER = "qr_scanner/{eventId}"
     const val PROFILE = "profile"
@@ -26,8 +28,15 @@ object Routes {
     fun registerEvent(eventId: String) = "register_event/$eventId"
     fun ticketDetail(ticketId: String) = "ticket_detail/$ticketId"
     fun editEvent(eventId: String) = "edit_event/$eventId"
+    fun manageStaff(eventId: String) = "manage_staff/$eventId"
     fun analytics(eventId: String) = "analytics/$eventId"
     fun qrScanner(eventId: String) = "qr_scanner/$eventId"
+
+    fun homeForRole(role: String): String = when (role.uppercase()) {
+        "ORGANIZER" -> MY_EVENTS
+        "STAFF" -> STAFF_EVENTS
+        else -> MARKETPLACE
+    }
     fun marketplaceCategory(categoryName: String): String {
         val encoded = URLEncoder.encode(categoryName, StandardCharsets.UTF_8.toString())
         return "marketplace/category/$encoded"

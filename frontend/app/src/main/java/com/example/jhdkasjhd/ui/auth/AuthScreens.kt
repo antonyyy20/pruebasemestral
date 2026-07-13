@@ -53,7 +53,7 @@ private fun isValidEmail(email: String): Boolean {
 @Composable
 fun LoginScreen(
     onNavigateRegister: () -> Unit,
-    onLoginSuccess: (isOrganizer: Boolean) -> Unit,
+    onLoginSuccess: (role: String) -> Unit,
     viewModel: AuthViewModel = quickvntViewModel()
 ) {
     var email by rememberSaveable { mutableStateOf("") }
@@ -93,7 +93,7 @@ fun LoginScreen(
 
     LaunchedEffect(uiState.success, session) {
         if (uiState.success && session != null) {
-            onLoginSuccess(session!!.isOrganizer)
+            onLoginSuccess(session!!.role)
         }
     }
 
@@ -198,7 +198,7 @@ fun LoginScreen(
 @Composable
 fun RegisterScreen(
     onNavigateLogin: () -> Unit,
-    onRegisterSuccess: (isOrganizer: Boolean) -> Unit,
+    onRegisterSuccess: (role: String) -> Unit,
     viewModel: AuthViewModel = quickvntViewModel()
 ) {
     var firstName by rememberSaveable { mutableStateOf("") }
@@ -255,7 +255,7 @@ fun RegisterScreen(
 
     LaunchedEffect(uiState.success, session) {
         if (uiState.success && session != null) {
-            onRegisterSuccess(session!!.isOrganizer)
+            onRegisterSuccess(session!!.role)
         }
     }
 
