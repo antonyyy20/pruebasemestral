@@ -262,43 +262,63 @@ async def create_and_assign_staff(
             detail="No eres el organizador de este evento",
         )
 
-    staff_profile = await resolve_or_create_staff_profile(
-        db=db,
-        email=str(staff_data.email),
-        password=staff_data.password,
-        name=staff_data.name,
-    )
+    try:
+        staff_profile = await resolve_or_create_staff_profile(
+            db=db,
+            email=str(staff_data.email),
+            password=staff_data.password,
+            name=staff_data.name,
+        )
 
-    existing_result = await db.execute(
-        select(StaffAssignment).where(
-            and_(
-                StaffAssignment.event_id == id,
-                StaffAssignment.user_id == staff_profile.id,
+        existing_result = await db.execute(
+            select(StaffAssignment).where(
+                and_(
+                    StaffAssignment.event_id == id,
+                    StaffAssignment.user_id == staff_profile.id,
+                )
             )
         )
-    )
-    if existing_result.scalar_one_or_none():
+        if existing_result.scalar_one_or_none():
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este usuario ya está asignado al staff de este evento",
+            )
+
+        staff_assign = StaffAssignment(
+            event_id=id,
+            user_id=staff_profile.id,
+        )
+        db.add(staff_assign)
+        await db.commit()
+        await db.refresh(staff_assign)
+        await db.refresh(staff_profile)
+
+        return StaffMemberResponse(
+            id=staff_assign.id,
+            event_id=staff_assign.event_id,
+            user_id=str(staff_assign.user_id),
+            name=staff_profile.name,
+            role=staff_profile.role,
+            assigned_at=staff_assign.assigned_at,
+        )
+    except HTTPException:
+        await db.rollback()
+        raise
+    except IntegrityError as exc:
+        await db.rollback()
+        detail = str(getattr(exc, "orig", exc))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Este usuario ya está asignado al staff de este evento",
-        )
-
-    staff_assign = StaffAssignment(
-        event_id=id,
-        user_id=staff_profile.id,
-    )
-    db.add(staff_assign)
-    await db.commit()
-    await db.refresh(staff_assign)
-
-    return StaffMemberResponse(
-        id=staff_assign.id,
-        event_id=staff_assign.event_id,
-        user_id=str(staff_assign.user_id),
-        name=staff_profile.name,
-        role=staff_profile.role,
-        assigned_at=staff_assign.assigned_at,
-    )
+            detail=f"No se pudo asignar el staff: {detail}",
+        ) from exc
+    except SQLAlchemyError as exc:
+        await db.rollback()
+        detail = str(getattr(exc, "orig", exc))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al guardar el staff: {detail}",
+        ) from exc
 
 
 @router.delete("/{id}/staff/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -71,7 +71,8 @@ class StaffManagementViewModel(
     fun createStaff(eventId: String, name: String, email: String, password: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, operationSuccess = false)
-            eventRepository.createStaff(eventId, email.trim(), password, name.trim())
+            val result = createStaffWithOptionalRetry(eventId, email.trim(), password, name.trim())
+            result
                 .onSuccess {
                     eventRepository.listEventStaff(eventId)
                         .onSuccess { members ->
@@ -93,6 +94,27 @@ class StaffManagementViewModel(
                         error = it.message ?: "No se pudo crear la cuenta de staff"
                     )
                 }
+        }
+    }
+
+    private suspend fun createStaffWithOptionalRetry(
+        eventId: String,
+        email: String,
+        password: String,
+        name: String
+    ): Result<StaffMemberResponse> {
+        val firstAttempt = eventRepository.createStaff(eventId, email, password, name)
+        if (firstAttempt.isSuccess) return firstAttempt
+
+        val message = firstAttempt.exceptionOrNull()?.message.orEmpty()
+        val shouldRetry = message.contains("500", ignoreCase = true) ||
+            message.contains("no está disponible", ignoreCase = true) ||
+            message.contains("interno", ignoreCase = true)
+
+        return if (shouldRetry) {
+            eventRepository.createStaff(eventId, email, password, name)
+        } else {
+            firstAttempt
         }
     }
 

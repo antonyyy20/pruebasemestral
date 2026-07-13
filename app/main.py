@@ -1,12 +1,17 @@
 import contextlib
-from fastapi import FastAPI, Depends
+import logging
+
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 from typing import Annotated
 
 from app.core.config import settings
 from app.core.database import init_db, get_db
+
+logger = logging.getLogger(__name__)
 
 # Routers
 from app.auth.router import router as auth_router
@@ -27,6 +32,16 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan
 )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor. Intenta de nuevo."},
+    )
+
 
 # Set all CORS enabled origins
 app.add_middleware(
