@@ -1,8 +1,14 @@
 import datetime
 import uuid
-from typing import Any, Optional
-from sqlmodel import SQLModel, Field, Relationship, Column
+from typing import Any
+
+from sqlalchemy import DateTime
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import SQLModel, Field, Column
+
+
+def utc_now() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
 
 class Ticket(SQLModel, table=True):
     __tablename__ = "tickets"
@@ -19,6 +25,6 @@ class Ticket(SQLModel, table=True):
         sa_column=Column(JSONB, nullable=False, server_default="{}")
     )
     registered_at: datetime.datetime = Field(
-        default_factory=datetime.datetime.utcnow,
-        nullable=False
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
