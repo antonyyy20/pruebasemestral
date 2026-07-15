@@ -14,6 +14,13 @@ class EventBase(BaseModel):
     banner_url: str | None = None
     custom_form_schema: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("date_start", "date_end", mode="after")
+    @classmethod
+    def ensure_utc(cls, value: datetime.datetime) -> datetime.datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=datetime.timezone.utc)
+        return value.astimezone(datetime.timezone.utc)
+
 class EventCreate(EventBase):
     pass
 

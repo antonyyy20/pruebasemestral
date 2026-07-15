@@ -2,8 +2,13 @@ import datetime
 import uuid
 from typing import Any
 
+from sqlalchemy import DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import SQLModel, Field, Column
+
+
+def utc_now() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
 
 
 class Event(SQLModel, table=True):
@@ -15,8 +20,8 @@ class Event(SQLModel, table=True):
     description: str
     category: str
     location: str
-    date_start: datetime.datetime
-    date_end: datetime.datetime
+    date_start: datetime.datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    date_end: datetime.datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     capacity: int = Field(description="Max capacity of the event")
     banner_url: str | None = None
     status: str = Field(default="DRAFT", description="DRAFT, PUBLISHED, CLOSED, CANCELLED")
@@ -27,8 +32,8 @@ class Event(SQLModel, table=True):
     )
     
     created_at: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
-        nullable=False
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
 class StaffAssignment(SQLModel, table=True):
@@ -38,6 +43,6 @@ class StaffAssignment(SQLModel, table=True):
     event_id: uuid.UUID = Field(foreign_key="events.id", nullable=False)
     user_id: uuid.UUID = Field(foreign_key="profiles.id", nullable=False)
     assigned_at: datetime.datetime = Field(
-        default_factory=datetime.datetime.utcnow,
-        nullable=False
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
