@@ -91,13 +91,16 @@ async def validate_checkin(
             detail="El boleto ha sido cancelado"
         )
 
-    # 5. Check if already checked in (Idempotency)
+    # 5. Reject duplicate scans
     checkin_query = select(Checkin).where(Checkin.ticket_id == ticket.id)
     checkin_result = await db.execute(checkin_query)
     existing_checkin = checkin_result.scalar_one_or_none()
 
-    if existing_checkin:
-        return existing_checkin
+    if existing_checkin or ticket.status == "CHECKED_IN":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Este boleto ya fue escaneado",
+        )
 
     # 6. Create Checkin and update Ticket status
     new_checkin = Checkin(
